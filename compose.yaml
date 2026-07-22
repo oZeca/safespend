@@ -1,0 +1,13 @@
+services:
+  app:
+    build: .
+    environment:
+      DATABASE_PATH: /app/data/safespend.db
+    ports:
+      - "3000:3000"
+    volumes:
+      - safespend-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  safespend-data:
