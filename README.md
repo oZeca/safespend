@@ -1,6 +1,6 @@
 # SafeSpend
 
-Private, single-user personal finance software. The application currently includes the project foundation and account management through Task 2. Transactions, imports, budgets, and forecasting remain intentionally unimplemented.
+Private, single-user personal finance software. The application currently includes the project foundation, accounts, default categories, and manual transaction management through Task 3. Imports, rules, splits, budgets, and forecasting remain intentionally unimplemented.
 
 ## Local setup
 
@@ -39,6 +39,12 @@ The Accounts page supports creating, editing, and archiving current, savings, ca
 
 Archived accounts retain their history and are excluded from active summary totals. Restoring archived accounts is not part of Task 2.
 
+## Transactions and categories
+
+The Transactions page supports paginated search and filtering by account, category, type, and date range. Manual transactions can be created, edited, categorized, annotated, and soft-deleted. Amounts are signed account movements: income and refunds are positive, expenses are negative, and transfers may use either sign.
+
+Monthly totals exclude transfers and deleted rows. Refunds reduce expenses. The initial category set is installed idempotently by migration `0003`; category editing, automatic rules, splits, and linked transfers are later tasks. Manual transaction changes do not alter the account balance entered on the Accounts page.
+
 ## Database
 
 Plain numbered SQL migrations live in `src/db/migrations` and are tracked in `schema_migrations`. Each connection enables WAL, foreign keys, synchronous `NORMAL`, and a 5000 ms busy timeout. Synchronous database modules are server-only and must not be imported into client components.
@@ -61,4 +67,4 @@ npm run test:e2e
 npm run build
 ```
 
-Repository tests use temporary SQLite databases and cover migrations, required pragmas, account mutations, balance snapshots, exact money parsing, and account summary aggregation.
+Repository tests use temporary SQLite databases and cover migrations, required pragmas, account and transaction mutations, balance snapshots, soft deletion, exact money handling, filtering, and deterministic monthly totals.

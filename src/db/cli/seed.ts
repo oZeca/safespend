@@ -4,5 +4,5 @@ import { runMigrations } from "../migrate";
 const database = openDatabase();
 try {
   runMigrations(database);
-  console.log(`No Task 1 seed data required. Database ready: ${resolveDatabasePath()}`);
+  console.log(`Default data and migrations ready: ${resolveDatabasePath()}`);
 } finally { database.close(); }

@@ -15,15 +15,16 @@ describe("database foundation", () => {
     directories.push(directory);
     const database = openDatabase(path.join(directory, "test.db"));
     try {
-      expect(runMigrations(database).applied).toEqual(["0001_initial_schema.sql", "0002_accounts_indexes.sql"]);
+      expect(runMigrations(database).applied).toEqual(["0001_initial_schema.sql", "0002_accounts_indexes.sql", "0003_default_categories.sql"]);
       expect(runMigrations(database).applied).toEqual([]);
-      expect(getDatabaseHealth(database)).toEqual({ ok: true, migrationCount: 2 });
+      expect(getDatabaseHealth(database)).toEqual({ ok: true, migrationCount: 3 });
       expect(database.pragma("journal_mode", { simple: true })).toBe("wal");
       expect(database.pragma("foreign_keys", { simple: true })).toBe(1);
       expect(database.pragma("synchronous", { simple: true })).toBe(1);
       expect(database.pragma("busy_timeout", { simple: true })).toBe(5000);
       const tables = database.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").pluck().all();
       expect(tables).toContain("transactions");
+      expect((database.prepare("SELECT COUNT(*) AS count FROM categories").get() as { count: number }).count).toBe(16);
     } finally { database.close(); }
   });
 });
