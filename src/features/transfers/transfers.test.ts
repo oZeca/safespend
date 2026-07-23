@@ -42,6 +42,8 @@ describe("splits", () => {
         { categoryId: "category-shopping", amountCents: -4000, notes: null }
       ])).toMatchObject([{ categoryName: "Groceries", amountCents: -6000 }, { categoryName: "Shopping", amountCents: -4000 }]);
       expect(transactions.findById(transaction.id)).toMatchObject({ categoryId: null, splitCount: 2 });
+      expect(transactions.list({ categoryId: "category-groceries", page: 1, pageSize: 20 }).items).toMatchObject([{ id: transaction.id }]);
+      expect(transactions.list({ categoryId: "uncategorized", page: 1, pageSize: 20 }).items).toEqual([]);
       expect(() => transfers.replaceSplits(transaction.id, [
         { categoryId: "category-groceries", amountCents: -5000, notes: null },
         { categoryId: "category-shopping", amountCents: -4000, notes: null }

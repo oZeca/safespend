@@ -7,7 +7,7 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
       <header className="border-b bg-background">
         <div className="container flex h-16 items-center justify-between">
           <Link className="flex items-center gap-2 font-semibold" href="/dashboard"><Landmark className="h-5 w-5" />SafeSpend</Link>
-          <nav className="flex items-center gap-2 text-xs sm:gap-4 sm:text-sm"><Link className="text-muted-foreground hover:text-foreground" href="/dashboard">Dashboard</Link><Link className="text-muted-foreground hover:text-foreground" href="/accounts">Accounts</Link><Link className="text-muted-foreground hover:text-foreground" href="/transactions">Transactions</Link><Link className="text-muted-foreground hover:text-foreground" href="/imports">Imports</Link><Link className="text-muted-foreground hover:text-foreground" href="/rules">Rules</Link></nav>
+          <nav className="flex items-center gap-2 text-xs sm:gap-4 sm:text-sm"><Link className="text-muted-foreground hover:text-foreground" href="/dashboard">Dashboard</Link><Link className="text-muted-foreground hover:text-foreground" href="/accounts">Accounts</Link><Link className="text-muted-foreground hover:text-foreground" href="/transactions">Transactions</Link><Link className="text-muted-foreground hover:text-foreground" href="/forecast">Forecast</Link><Link className="text-muted-foreground hover:text-foreground" href="/imports">Imports</Link><Link className="text-muted-foreground hover:text-foreground" href="/rules">Rules</Link></nav>
         </div>
       </header>
       <main className="container py-6 sm:py-10">{children}</main>

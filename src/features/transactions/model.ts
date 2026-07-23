@@ -8,9 +8,11 @@ export interface AccountOption { id: string; name: string; currency: string; }
 
 export interface Transaction {
   id: string; accountId: string; accountName: string; date: string; description: string; normalizedDescription: string; merchant: string | null;
-  amountCents: number; transactionType: TransactionType; categoryId: string | null; categoryName: string | null; notes: string | null; splitCount: number; createdAt: string; updatedAt: string;
+  amountCents: number; transactionType: TransactionType; categoryId: string | null; categoryName: string | null; notes: string | null; splitCount: number;
+  isRecurring: boolean; isExceptional: boolean; excludedFromForecastBaseline: boolean; createdAt: string; updatedAt: string;
 }
 
-export interface TransactionFilters { search?: string; accountId?: string; categoryId?: string; transactionType?: TransactionType; dateFrom?: string; dateTo?: string; page: number; pageSize: number; }
+export type TransactionFlow = "spending" | "actual";
+export interface TransactionFilters { search?: string; accountId?: string; categoryId?: string; transactionType?: TransactionType; flow?: TransactionFlow; dateFrom?: string; dateTo?: string; page: number; pageSize: number; }
 export interface TransactionPage { items: Transaction[]; totalCount: number; page: number; pageSize: number; totalPages: number; }
 export interface MonthlyTotals { month: string; incomeCents: number; expenseCents: number; savingsCents: number; }

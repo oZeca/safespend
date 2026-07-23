@@ -50,6 +50,8 @@ describe("transaction repository", () => {
       const deleted = repository.create({ ...base(account.id), amountCents: 90000, transactionType: "income" }); repository.softDelete(deleted.id);
       repository.create({ ...base(account.id), date: "2026-08-01", amountCents: 50000, transactionType: "income" });
       expect(repository.monthlyTotals("2026-07")).toEqual({ month: "2026-07", incomeCents: 10000, expenseCents: 4000, savingsCents: 6000 });
+      expect(repository.list({ flow: "actual", dateFrom: "2026-07-01", dateTo: "2026-07-31", page: 1, pageSize: 20 }).totalCount).toBe(3);
+      expect(repository.list({ flow: "spending", dateFrom: "2026-07-01", dateTo: "2026-07-31", page: 1, pageSize: 20 }).totalCount).toBe(2);
     } finally { database.close(); }
   });
 });

@@ -16,7 +16,8 @@ export const transactionInputSchema = z.object({
   accountId: z.string().trim().min(1, "Select an account"), date: z.string().refine(isCalendarDate, "Enter a valid date"),
   description: z.string().trim().min(1, "Description is required").max(250, "Description must be 250 characters or fewer"),
   merchant: z.string().trim().max(150, "Merchant must be 150 characters or fewer"), amount,
-  transactionType: z.enum(transactionTypes, { message: "Select a transaction type" }), categoryId: z.string().trim(), notes: z.string().trim().max(1000, "Notes must be 1000 characters or fewer")
+  transactionType: z.enum(transactionTypes, { message: "Select a transaction type" }), categoryId: z.string().trim(), notes: z.string().trim().max(1000, "Notes must be 1000 characters or fewer"),
+  isRecurring: z.boolean().default(false), isExceptional: z.boolean().default(false), excludedFromForecastBaseline: z.boolean().default(false)
 }).superRefine((value, context) => {
   const cents = parseMoneyToCents(value.amount); if (cents === null) return;
   if (value.transactionType === "expense" && cents > 0) context.addIssue({ code: z.ZodIssueCode.custom, path: ["amount"], message: "Expenses must use a negative amount" });
@@ -25,7 +26,8 @@ export const transactionInputSchema = z.object({
 
 export type TransactionInput = z.infer<typeof transactionInputSchema>;
 export function transactionInputFromFormData(formData: FormData): Record<string, unknown> {
-  return { accountId: formData.get("accountId"), date: formData.get("date"), description: formData.get("description"), merchant: formData.get("merchant"), amount: formData.get("amount"), transactionType: formData.get("transactionType"), categoryId: formData.get("categoryId"), notes: formData.get("notes") };
+  return { accountId: formData.get("accountId"), date: formData.get("date"), description: formData.get("description"), merchant: formData.get("merchant"), amount: formData.get("amount"), transactionType: formData.get("transactionType"), categoryId: formData.get("categoryId"), notes: formData.get("notes"),
+    isRecurring: formData.get("isRecurring") === "on", isExceptional: formData.get("isExceptional") === "on", excludedFromForecastBaseline: formData.get("excludedFromForecastBaseline") === "on" };
 }
 
 export function isTransactionType(value: string | undefined): value is TransactionType { return transactionTypes.includes(value as TransactionType); }
