@@ -35,7 +35,7 @@ export async function updateTransactionAction(id: string, _state: TransactionFor
   if (!existing) return { message: "This transaction no longer exists.", values: valuesFromFormData(formData) };
   const result = validate(formData, existing.accountId); if (!result.success) return result.state;
   try { if (!repository.update(id, result.data)) return { message: "This transaction no longer exists.", values: valuesFromFormData(formData) }; }
-  catch (error) { console.error("Failed to update transaction", error); return { message: "The transaction could not be updated. Please try again.", values: valuesFromFormData(formData) }; }
+  catch (error) { console.error("Failed to update transaction", error); return { message: error instanceof Error ? error.message : "The transaction could not be updated. Please try again.", values: valuesFromFormData(formData) }; }
   revalidatePath("/transactions"); revalidatePath(`/transactions/${id}/edit`); redirect(`/transactions?status=updated${result.data.categoryId ? `&suggest=${encodeURIComponent(id)}` : ""}`);
 }
 export async function deleteTransactionAction(formData: FormData): Promise<void> {

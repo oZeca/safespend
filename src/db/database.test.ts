@@ -15,9 +15,9 @@ describe("database foundation", () => {
     directories.push(directory);
     const database = openDatabase(path.join(directory, "test.db"));
     try {
-      expect(runMigrations(database).applied).toEqual(["0001_initial_schema.sql", "0002_accounts_indexes.sql", "0003_default_categories.sql", "0004_csv_import_staging.sql", "0005_categorization_rules.sql"]);
+      expect(runMigrations(database).applied).toEqual(["0001_initial_schema.sql", "0002_accounts_indexes.sql", "0003_default_categories.sql", "0004_csv_import_staging.sql", "0005_categorization_rules.sql", "0006_transfers_and_splits.sql"]);
       expect(runMigrations(database).applied).toEqual([]);
-      expect(getDatabaseHealth(database)).toEqual({ ok: true, migrationCount: 5 });
+      expect(getDatabaseHealth(database)).toEqual({ ok: true, migrationCount: 6 });
       expect(database.pragma("journal_mode", { simple: true })).toBe("wal");
       expect(database.pragma("foreign_keys", { simple: true })).toBe(1);
       expect(database.pragma("synchronous", { simple: true })).toBe(1);

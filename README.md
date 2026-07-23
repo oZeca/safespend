@@ -1,6 +1,6 @@
 # SafeSpend
 
-Private, single-user personal finance software. The application currently includes the project foundation, accounts, transactions, generic CSV imports, and categorization rules. Workbook imports, splits, budgets, and forecasting remain intentionally unimplemented.
+Private, single-user personal finance software. The application currently includes the project foundation, accounts, transactions, generic CSV imports, categorization rules, splits, and linked transfers. Workbook imports, budgets, and forecasting remain intentionally unimplemented.
 
 ## Local setup
 
@@ -43,7 +43,15 @@ Archived accounts retain their history and are excluded from active summary tota
 
 The Transactions page supports paginated search and filtering by account, category, type, and date range. Manual transactions can be created, edited, categorized, annotated, and soft-deleted. Amounts are signed account movements: income and refunds are positive, expenses are negative, and transfers may use either sign.
 
-Monthly totals exclude transfers and deleted rows. Refunds reduce expenses. The initial category set is installed idempotently by migration `0003`; category editing, automatic rules, splits, and linked transfers are later tasks. Manual transaction changes do not alter the account balance entered on the Accounts page.
+Monthly totals exclude transfers and deleted rows. Refunds reduce expenses. The initial category set is installed idempotently by migration `0003`; category editing remains out of scope. Manual transaction changes do not alter the account balance entered on the Accounts page.
+
+## Transfers and splits
+
+The transaction edit page can divide a non-transfer transaction across two or more categories. Every split is a non-zero signed amount in the same direction as its parent, and the rows must add up exactly to the parent amount. Saving splits clears the parent category; removing all splits leaves it uncategorized until it is edited.
+
+An outgoing transaction can be marked as a transfer and optionally linked to an unlinked incoming transaction in another owned account. Linked amounts must be exact opposites and both accounts must use the same currency. Each transaction can belong to at most one link. Linking classifies both sides as transfers; unlinking leaves both classifications intact for explicit review. Dates may differ.
+
+When individual credit-card purchases are imported as expenses, classify the bank payment and matching card credit as a transfer. This keeps the payment out of expense totals and avoids counting the card spending twice. Automatic transfer matching and investment-transfer savings-goal treatment are not part of Task 7.
 
 ## CSV imports
 
@@ -79,4 +87,4 @@ npm run test:e2e
 npm run build
 ```
 
-Repository tests use temporary SQLite databases and cover migrations, required pragmas, account and transaction mutations, balance snapshots, CSV parsing and normalization, import validation, categorization matching and precedence, rule previews and bulk application, import-time rules, profile persistence, exact duplicates, original-row preservation, soft deletion, filtering, and deterministic monthly totals.
+Repository tests use temporary SQLite databases and cover migrations, required pragmas, account and transaction mutations, balance snapshots, CSV parsing and normalization, import validation, categorization matching and precedence, rule previews and bulk application, import-time rules, profile persistence, exact duplicates, original-row preservation, soft deletion, filtering, deterministic monthly totals, exact split validation, and transfer-link integrity.

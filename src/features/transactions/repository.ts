@@ -6,13 +6,14 @@ import { normalizeDescription } from "./validation";
 
 interface TransactionRow {
   id: string; accountId: string; accountName: string; date: string; description: string; normalizedDescription: string; merchant: string | null;
-  amountCents: number; transactionType: TransactionType; categoryId: string | null; categoryName: string | null; notes: string | null; createdAt: string; updatedAt: string;
+  amountCents: number; transactionType: TransactionType; categoryId: string | null; categoryName: string | null; notes: string | null; splitCount: number; createdAt: string; updatedAt: string;
 }
 export interface TransactionWrite { accountId: string; date: string; description: string; merchant: string | null; amountCents: number; transactionType: TransactionType; categoryId: string | null; notes: string | null; }
 export interface TransactionRepositoryOptions { now?: () => Date; id?: () => string; }
 
 const select = `SELECT t.id, t.account_id AS accountId, a.name AS accountName, t.date, t.description, t.normalized_description AS normalizedDescription, t.merchant,
-  t.amount_cents AS amountCents, t.transaction_type AS transactionType, t.category_id AS categoryId, c.name AS categoryName, t.notes, t.created_at AS createdAt, t.updated_at AS updatedAt
+  t.amount_cents AS amountCents, t.transaction_type AS transactionType, t.category_id AS categoryId, c.name AS categoryName, t.notes,
+  (SELECT COUNT(*) FROM transaction_splits ts WHERE ts.transaction_id = t.id) AS splitCount, t.created_at AS createdAt, t.updated_at AS updatedAt
   FROM transactions t JOIN accounts a ON a.id = t.account_id LEFT JOIN categories c ON c.id = t.category_id`;
 
 function escapeLike(value: string): string { return value.replace(/[\\%_]/g, "\\$&"); }
@@ -53,12 +54,24 @@ export function createTransactionRepository(database: Database.Database, options
       return this.findById(id)!;
     },
     update(id: string, input: TransactionWrite): Transaction | null {
+      const existing = this.findById(id);
+      if (!existing) return null;
+      if (existing.splitCount > 0 && (input.amountCents !== existing.amountCents || input.transactionType === "transfer" || input.categoryId !== null)) {
+        throw new Error("Remove or update the splits before changing the amount, type, or category.");
+      }
+      const linked = database.prepare("SELECT 1 FROM transfer_links WHERE source_transaction_id = ? OR destination_transaction_id = ?").get(id, id);
+      if (linked && (input.accountId !== existing.accountId || input.amountCents !== existing.amountCents || input.transactionType !== "transfer")) {
+        throw new Error("Unlink this transfer before changing its account, amount, or type.");
+      }
       const result = database.prepare(`UPDATE transactions SET account_id = ?, date = ?, description = ?, normalized_description = ?, merchant = ?, amount_cents = ?, transaction_type = ?, category_id = ?, notes = ?, updated_at = ? WHERE id = ? AND is_deleted = 0`)
         .run(input.accountId, input.date, input.description, normalizeDescription(input.description), input.merchant, input.amountCents, input.transactionType, input.categoryId, input.notes, now().toISOString(), id);
       return result.changes ? this.findById(id) : null;
     },
     softDelete(id: string): boolean {
-      return database.prepare("UPDATE transactions SET is_deleted = 1, updated_at = ? WHERE id = ? AND is_deleted = 0").run(now().toISOString(), id).changes === 1;
+      return database.transaction(() => {
+        database.prepare("DELETE FROM transfer_links WHERE source_transaction_id = ? OR destination_transaction_id = ?").run(id, id);
+        return database.prepare("UPDATE transactions SET is_deleted = 1, updated_at = ? WHERE id = ? AND is_deleted = 0").run(now().toISOString(), id).changes === 1;
+      })();
     },
     monthlyTotals(month: string) {
       const [year, monthNumber] = month.split("-").map(Number); const nextMonth = monthNumber === 12 ? `${year + 1}-01` : `${year}-${String(monthNumber + 1).padStart(2, "0")}`;

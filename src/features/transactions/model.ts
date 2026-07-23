@@ -8,7 +8,7 @@ export interface AccountOption { id: string; name: string; currency: string; }
 
 export interface Transaction {
   id: string; accountId: string; accountName: string; date: string; description: string; normalizedDescription: string; merchant: string | null;
-  amountCents: number; transactionType: TransactionType; categoryId: string | null; categoryName: string | null; notes: string | null; createdAt: string; updatedAt: string;
+  amountCents: number; transactionType: TransactionType; categoryId: string | null; categoryName: string | null; notes: string | null; splitCount: number; createdAt: string; updatedAt: string;
 }
 
 export interface TransactionFilters { search?: string; accountId?: string; categoryId?: string; transactionType?: TransactionType; dateFrom?: string; dateTo?: string; page: number; pageSize: number; }

@@ -6,6 +6,6 @@ export function calculateMonthlyTotals(rows: Array<{ transactionType: Transactio
     if (row.transactionType === "income") incomeCents += row.amountCents;
     if (row.transactionType === "expense" || row.transactionType === "refund") expenseNetCents += row.amountCents;
   }
-  const expenseCents = -expenseNetCents;
+  const expenseCents = expenseNetCents === 0 ? 0 : -expenseNetCents;
   return { month, incomeCents, expenseCents, savingsCents: incomeCents - expenseCents };
 }
