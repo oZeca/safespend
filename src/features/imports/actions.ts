@@ -1,0 +1,49 @@
+"use server";
+
+import { createHash } from "node:crypto";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { parseCsv } from "./csv";
+import type { CsvMapping } from "./model";
+import { getImportRepository } from "./server-repository";
+import { mappingFromFormData, mappingSchema } from "./validation";
+import { getTransactionRepository } from "@/features/transactions/server-repository";
+
+export interface ImportActionState { message?: string; errors?: Record<string, string[]>; }
+
+function mappingHeadersValid(mapping: CsvMapping, headers: string[]) { return [mapping.dateColumn, mapping.descriptionColumn, mapping.amountColumn, mapping.merchantColumn].filter(Boolean).every((column) => headers.includes(column!)); }
+
+export async function uploadCsvAction(_state: ImportActionState, formData: FormData): Promise<ImportActionState> {
+  const file = formData.get("file"); const accountId = String(formData.get("accountId") ?? ""); const profileId = String(formData.get("profileId") ?? "");
+  if (!(file instanceof File) || !file.name) return { message: "Choose a CSV file.", errors: { file: ["CSV file is required"] } };
+  if (file.size > 5 * 1024 * 1024) return { message: "The CSV is too large.", errors: { file: ["Maximum file size is 5 MB"] } };
+  if (!file.name.toLocaleLowerCase("en").endsWith(".csv")) return { message: "Choose a .csv file.", errors: { file: ["Only CSV files are supported"] } };
+  if (!getTransactionRepository().listOptions().accounts.some((account) => account.id === accountId)) return { message: "Select an active account.", errors: { accountId: ["Account is required"] } };
+  let csv; let bytes: Uint8Array;
+  try { bytes = new Uint8Array(await file.arrayBuffer()); csv = parseCsv(new TextDecoder("utf-8", { fatal: true }).decode(bytes)); }
+  catch (error) { return { message: error instanceof Error ? error.message : "The CSV could not be read." }; }
+  const repository = getImportRepository(); const importId = repository.stage(file.name, createHash("sha256").update(bytes).digest("hex"), accountId, csv);
+  if (profileId) {
+    const profile = repository.findProfile(profileId); if (!profile || !mappingHeadersValid(profile.configuration, csv.headers)) return { message: "The selected profile does not match this CSV's headers." };
+    repository.prepare(importId, { ...profile.configuration, delimiter: csv.delimiter }, undefined, profile.id); revalidatePath("/imports"); redirect(`/imports/${importId}/preview`);
+  }
+  redirect(`/imports/${importId}/map`);
+}
+
+export async function mapImportAction(importId: string, _state: ImportActionState, formData: FormData): Promise<ImportActionState> {
+  const repository = getImportRepository(); const detail = repository.findById(importId); if (!detail) return { message: "Import not found." };
+  const result = mappingSchema.safeParse(mappingFromFormData(formData));
+  if (!result.success) return { message: "Check the column mapping.", errors: result.error.flatten().fieldErrors };
+  const headers = Object.keys(detail.rows[0]?.original ?? {}); if (!mappingHeadersValid(result.data, headers)) return { message: "A mapped column is not present in the CSV." };
+  const saveProfile = formData.get("saveProfile") === "on"; const profileName = String(formData.get("profileName") ?? "").trim();
+  if (saveProfile && !profileName) return { message: "Enter a profile name.", errors: { profileName: ["Profile name is required"] } };
+  try { repository.prepare(importId, result.data, saveProfile ? profileName : undefined); }
+  catch (error) { console.error("Failed to prepare import", error); return { message: "The import could not be prepared. Please try again." }; }
+  revalidatePath("/imports"); redirect(`/imports/${importId}/preview`);
+}
+
+export async function confirmImportAction(formData: FormData): Promise<void> {
+  const importId = String(formData.get("importId") ?? ""); let completed = false;
+  try { completed = Boolean(getImportRepository().confirm(importId)); } catch (error) { console.error("Failed to confirm import", error); }
+  revalidatePath("/imports"); revalidatePath("/transactions"); redirect(completed ? `/imports/${importId}/preview?status=completed` : "/imports?status=confirm-error");
+}

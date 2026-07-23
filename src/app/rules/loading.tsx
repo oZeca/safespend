@@ -1,0 +1,1 @@
+export default function RulesLoading() { return <div className="mx-auto max-w-5xl animate-pulse space-y-5" aria-label="Loading rules"><div className="h-9 w-44 rounded bg-muted" /><div className="h-24 rounded-xl bg-muted" /><div className="h-32 rounded-xl bg-muted" /></div>; }

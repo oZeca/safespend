@@ -1,6 +1,6 @@
 # SafeSpend
 
-Private, single-user personal finance software. The application currently includes the project foundation, accounts, default categories, and manual transaction management through Task 3. Imports, rules, splits, budgets, and forecasting remain intentionally unimplemented.
+Private, single-user personal finance software. The application currently includes the project foundation, accounts, transactions, generic CSV imports, and categorization rules. Workbook imports, splits, budgets, and forecasting remain intentionally unimplemented.
 
 ## Local setup
 
@@ -45,6 +45,18 @@ The Transactions page supports paginated search and filtering by account, catego
 
 Monthly totals exclude transfers and deleted rows. Refunds reduce expenses. The initial category set is installed idempotently by migration `0003`; category editing, automatic rules, splits, and linked transfers are later tasks. Manual transaction changes do not alter the account balance entered on the Accounts page.
 
+## CSV imports
+
+The Imports page accepts UTF-8 CSV files up to 5 MB and 5,000 data rows. Comma, semicolon, and tab delimiters are detected automatically. The mapping step supports `YYYY-MM-DD`, `DD/MM/YYYY`, and `DD-MM-YYYY` dates plus decimal-comma and decimal-point amounts. Mappings may be saved as reusable profiles for files with matching headers.
+
+Preview flags invalid and exact-duplicate rows before confirmation. Confirmation is transactional, skips invalid/duplicate rows, preserves the complete original row JSON, and stores stable SHA-256 source fingerprints. Re-importing the same mapped rows does not create duplicate transactions. Positive amounts default to income and negative amounts to expenses; a matching categorization rule may override the category and type.
+
+## Categorization rules
+
+Rules match description, normalized description, or merchant using case-insensitive contains, starts-with, exact, or regular-expression matching. Lower priority numbers run first and the first enabled match wins. A rule assigns a category and may override transaction type.
+
+Rule forms can preview current matches before saving. Enabled rules are applied during CSV preview and confirmation, and can be bulk-applied to active uncategorized transactions. Manually categorizing a transaction offers a prefilled rule suggestion. Deleting or disabling a rule does not undo categories previously assigned by it.
+
 ## Database
 
 Plain numbered SQL migrations live in `src/db/migrations` and are tracked in `schema_migrations`. Each connection enables WAL, foreign keys, synchronous `NORMAL`, and a 5000 ms busy timeout. Synchronous database modules are server-only and must not be imported into client components.
@@ -67,4 +79,4 @@ npm run test:e2e
 npm run build
 ```
 
-Repository tests use temporary SQLite databases and cover migrations, required pragmas, account and transaction mutations, balance snapshots, soft deletion, exact money handling, filtering, and deterministic monthly totals.
+Repository tests use temporary SQLite databases and cover migrations, required pragmas, account and transaction mutations, balance snapshots, CSV parsing and normalization, import validation, categorization matching and precedence, rule previews and bulk application, import-time rules, profile persistence, exact duplicates, original-row preservation, soft deletion, filtering, and deterministic monthly totals.

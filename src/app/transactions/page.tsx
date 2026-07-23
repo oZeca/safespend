@@ -10,7 +10,7 @@ import { isTransactionType } from "@/features/transactions/validation";
 import { localMonthString } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
-type Params = { search?: string; account?: string; category?: string; type?: string; from?: string; to?: string; page?: string; month?: string; status?: string };
+type Params = { search?: string; account?: string; category?: string; type?: string; from?: string; to?: string; page?: string; month?: string; status?: string; suggest?: string };
 const statuses: Record<string, string> = { created: "Transaction created.", updated: "Transaction updated.", deleted: "Transaction deleted.", "delete-error": "The transaction could not be deleted." };
 function validDate(value?: string) { if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return undefined; const [year, month, day] = value.split("-").map(Number); const date = new Date(Date.UTC(year, month - 1, day)); return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day ? value : undefined; }
 function validMonth(value?: string) { return value && /^\d{4}-(0[1-9]|1[0-2])$/.test(value) ? value : localMonthString(); }
@@ -18,12 +18,15 @@ function pageHref(params: Params, page: number) { const query = new URLSearchPar
 
 export default async function TransactionsPage({ searchParams }: { searchParams: Promise<Params> }) {
   const params = await searchParams; const repository = getTransactionRepository(); const options = repository.listOptions();
+  const suggestedTransaction = params.suggest ? repository.findById(params.suggest) : null;
+  const suggestionQuery = suggestedTransaction?.categoryId ? new URLSearchParams({ name: `Categorize ${suggestedTransaction.description}`.slice(0, 100), matchField: "normalized_description", matchType: "exact", pattern: suggestedTransaction.normalizedDescription, categoryId: suggestedTransaction.categoryId, transactionType: suggestedTransaction.transactionType, priority: "100" }) : null;
   const requestedPage = Number.parseInt(params.page ?? "1", 10); const filters: TransactionFilters = { search: params.search?.trim() || undefined, accountId: params.account || undefined, categoryId: params.category || undefined,
     transactionType: isTransactionType(params.type) ? params.type : undefined, dateFrom: validDate(params.from), dateTo: validDate(params.to), page: Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1, pageSize: 20 };
   const result = repository.list(filters); const month = validMonth(params.month); const totals = repository.monthlyTotals(month);
   return <section className="mx-auto max-w-6xl space-y-7">
     <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-sm font-medium text-primary">Transactions</p><h1 className="text-3xl font-semibold tracking-tight">Money in and out</h1><p className="mt-2 text-sm text-muted-foreground">Search, categorize, and review manual transactions.</p></div><Button asChild><Link href="/transactions/new"><Plus className="mr-2 h-4 w-4" />Add transaction</Link></Button></div>
     {params.status && statuses[params.status] && <div className={`rounded-md border p-3 text-sm ${params.status === "delete-error" ? "border-red-200 bg-red-50 text-red-800" : "border-emerald-200 bg-emerald-50 text-emerald-900"}`} role="status">{statuses[params.status]}</div>}
+    {suggestionQuery && <div className="flex flex-col items-start justify-between gap-3 rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950 sm:flex-row sm:items-center"><span>Apply this categorization automatically to matching transactions?</span><Button asChild size="sm" variant="outline"><Link href={`/rules/new?${suggestionQuery}`}>Create rule</Link></Button></div>}
     <form className="grid gap-3 rounded-xl border bg-card p-4 sm:grid-cols-2 lg:grid-cols-4" method="get">
       <label className="relative sm:col-span-2"><span className="sr-only">Search transactions</span><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><input className="h-10 w-full rounded-md border bg-background pl-9 pr-3 text-sm" defaultValue={params.search} name="search" placeholder="Search description or merchant" /></label>
       <label><span className="sr-only">Account</span><select className="h-10 w-full rounded-md border bg-background px-3 text-sm" defaultValue={params.account ?? ""} name="account"><option value="">All accounts</option>{options.accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></label>

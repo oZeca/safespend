@@ -32,5 +32,5 @@ test("creates, edits, filters, and deletes a transaction", async ({ page }) => {
   page.once("dialog", (dialog) => dialog.accept());
   await updated.getByRole("button", { name: "Delete" }).click();
   await expect(page.getByText("Transaction deleted.")).toBeVisible();
-  await expect(page.getByText("No matching transactions")).toBeVisible();
+  await expect(page.getByText(`${description} updated`)).toHaveCount(0);
 });

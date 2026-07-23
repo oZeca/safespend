@@ -1,0 +1,1 @@
+export default function ImportsLoading() { return <div className="mx-auto max-w-5xl animate-pulse space-y-5" aria-label="Loading imports"><div className="h-9 w-56 rounded bg-muted" /><div className="h-72 rounded-xl bg-muted" /><div className="h-28 rounded-xl bg-muted" /></div>; }
