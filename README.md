@@ -1,6 +1,6 @@
 # SafeSpend
 
-Private, single-user personal finance software. The application currently includes the project foundation, accounts, transactions, generic CSV imports, categorization rules, splits, linked transfers, an actuals dashboard, annual savings goals, and expected-scenario forecasting. Workbook imports, budgets, and backup/release features remain intentionally unimplemented.
+Private, single-user personal finance software. The application currently includes accounts, transactions, generic CSV imports, categorization rules, splits, linked transfers, an actuals dashboard, annual savings goals, expected-scenario forecasting, backup and restore, CSV export, and production container support. Google Sheets workbook import and budgets remain outside the implemented task set.
 
 ## Local setup
 
@@ -12,6 +12,7 @@ cp .env.example .env
 npm install
 npm run db:migrate
 npm run db:seed
+npm run db:seed:demo
 npm run dev
 ```
 
@@ -32,6 +33,8 @@ npm run db:seed
 ```
 
 Install Chromium once before E2E testing with `npx playwright install chromium`.
+
+`npm run db:seed` only applies migrations and required defaults. `npm run db:seed:demo` explicitly adds idempotent synthetic accounts, transactions, a goal, and forecast assumptions. Never run demo seeding against a real finance database unless that data is wanted.
 
 ## Accounts
 
@@ -96,6 +99,14 @@ Savings credited combines the configured starting amount with actual income minu
 
 The dashboard exposes target progress, on-track status, upcoming recurring expenses, and the complete safe-to-spend derivation. Forecasts are planning estimates rather than guarantees; assumptions already represented by transactions should be removed to avoid counting them twice.
 
+## Backup, restore, and export
+
+The Settings page downloads a consistent SQLite snapshot through SQLite’s online backup API. Transaction CSV export includes active transactions, exact decimal amounts, categories, split JSON, forecast flags, transfer counterpart IDs, and import provenance.
+
+Restore requires both a browser confirmation and the exact phrase `RESTORE`. Uploads are limited to 100 MB and must use `.db`, `.sqlite`, or `.sqlite3`. SafeSpend checks the SQLite header, integrity, required tables, and migration compatibility in a temporary location. Compatible older backups are migrated before use; backups from a newer unknown schema are rejected.
+
+After validation, the current connection is closed and the uploaded database is atomically installed. The previous database remains beside `DATABASE_PATH` with a `.pre-restore-<timestamp>-<id>.db` name. Restore replaces all application data. Keep an external copy of important backups rather than relying only on the server volume.
+
 ## Database
 
 Plain numbered SQL migrations live in `src/db/migrations` and are tracked in `schema_migrations`. Each connection enables WAL, foreign keys, synchronous `NORMAL`, and a 5000 ms busy timeout. Synchronous database modules are server-only and must not be imported into client components.
@@ -103,10 +114,44 @@ Plain numbered SQL migrations live in `src/db/migrations` and are tracked in `sc
 ## Docker
 
 ```bash
-docker compose up --build
+docker compose up -d --build
+docker compose ps
+curl --fail http://127.0.0.1:3000/api/health
 ```
 
-The container migrates before starting, and the `safespend-data` volume persists the SQLite database. Only one application process may use this deployment.
+The container migrates before starting, includes an application/database health check, and stores SQLite in the `safespend-data` named volume. The published port binds only to host loopback. Docker named volumes persist independently of replaced containers, but `docker compose down -v` deletes the volume and must not be used unless data removal is intentional. See Docker’s [volume documentation](https://docs.docker.com/engine/storage/volumes/).
+
+### Private Ubuntu deployment over Tailscale
+
+1. Install current Docker Engine, the Compose plugin, and Tailscale on the private Ubuntu host.
+2. Clone or copy this repository, then run `docker compose up -d --build`.
+3. Confirm `docker compose ps` reports the application healthy and test `/api/health` locally.
+4. Publish the loopback service only to the tailnet with `tailscale serve 3000`. Tailscale documents this as a private reverse proxy to `127.0.0.1:3000`; do not use Funnel for this unauthenticated application. See the official [Tailscale Serve documentation](https://tailscale.com/docs/features/tailscale-serve).
+5. Restrict host SSH and administration using the tailnet and normal Ubuntu firewall policy.
+
+SafeSpend is single-user and has no application authentication. Run exactly one application replica against the SQLite volume. Do not place it on the public internet.
+
+### Updating
+
+1. Download a backup from Settings and copy it off the host.
+2. Pull or copy the new source.
+3. Run `docker compose build --pull`.
+4. Run `docker compose up -d`.
+5. Check `docker compose ps`, `/api/health`, and the dashboard.
+
+Container startup applies pending migrations. Roll back application code only together with a compatible database backup; newer migrations are not automatically reversed.
+
+### Recovery
+
+Prefer the guarded Settings restore. If the web application cannot start:
+
+1. Stop it with `docker compose stop`.
+2. Inspect the `safespend-data` volume and copy its contents before changing anything.
+3. Replace `safespend.db` with a known-good backup while the container is stopped.
+4. Preserve or remove matching `safespend.db-wal` and `safespend.db-shm` sidecars as part of the same recovery operation.
+5. Start the application and verify `/api/health`.
+
+Consult Docker’s [production Compose guidance](https://docs.docker.com/compose/how-tos/production/) when integrating SafeSpend with host-level monitoring or deployment automation.
 
 ## Verification
 
@@ -118,4 +163,4 @@ npm run test:e2e
 npm run build
 ```
 
-Repository tests use temporary SQLite databases and cover migrations, required pragmas, account and transaction mutations, balance snapshots, CSV parsing and normalization, import validation, categorization matching and precedence, rule previews and bulk application, import-time rules, profile persistence, exact duplicates, original-row preservation, soft deletion, filtering, deterministic monthly totals, exact split validation, transfer-link integrity, dashboard actuals, split-category spending, dashboard date validation, forecast persistence, recurrence expansion, baseline exclusions, investment-transfer credit, and positive/zero/negative safe-to-spend outcomes.
+Repository tests use temporary SQLite databases and cover migrations, required pragmas, account and transaction mutations, balance snapshots, CSV parsing and normalization, import validation, categorization matching and precedence, rule previews and bulk application, import-time rules, profile persistence, exact duplicates, original-row preservation, soft deletion, filtering, deterministic monthly totals, exact split validation, transfer-link integrity, dashboard actuals, split-category spending, dashboard date validation, forecast persistence, recurrence expansion, baseline exclusions, investment-transfer credit, positive/zero/negative safe-to-spend outcomes, backup integrity, restore compatibility, transaction export escaping, and idempotent demo data.

@@ -1,7 +1,9 @@
-node_modules
-.next
 .git
+.next
 data
-coverage
-playwright-report
+node_modules
 test-results
+playwright-report
+.env
+.env.*
+npm-debug.log*
