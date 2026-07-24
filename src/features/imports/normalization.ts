@@ -15,9 +15,15 @@ export function parseLocalizedMoney(value: string, format: DecimalFormat): numbe
 }
 
 export function parseLocalizedDate(value: string, format: DateFormat): string | null {
-  const pattern = format === "YYYY-MM-DD" ? /^(\d{4})-(\d{2})-(\d{2})$/ : format === "DD\/MM\/YYYY" ? /^(\d{2})\/(\d{2})\/(\d{4})$/ : /^(\d{2})-(\d{2})-(\d{4})$/;
+  const pattern = format === "YYYY-MM-DD"
+    ? /^(\d{4})-(\d{2})-(\d{2})$/
+    : format === "YYYY-MM-DD hh:mm:ss"
+      ? /^(\d{4})-(\d{2})-(\d{2}) ([01]\d|2[0-3]):([0-5]\d):([0-5]\d)$/
+      : format === "DD\/MM\/YYYY"
+        ? /^(\d{2})\/(\d{2})\/(\d{4})$/
+        : /^(\d{2})-(\d{2})-(\d{4})$/;
   const match = pattern.exec(value.trim()); if (!match) return null;
-  const [year, month, day] = format === "YYYY-MM-DD" ? [Number(match[1]), Number(match[2]), Number(match[3])] : [Number(match[3]), Number(match[2]), Number(match[1])];
+  const [year, month, day] = format === "YYYY-MM-DD" || format === "YYYY-MM-DD hh:mm:ss" ? [Number(match[1]), Number(match[2]), Number(match[3])] : [Number(match[3]), Number(match[2]), Number(match[1])];
   const date = new Date(Date.UTC(year, month - 1, day)); if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null;
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }

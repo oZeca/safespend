@@ -1,4 +1,4 @@
-export const dateFormats = ["YYYY-MM-DD", "DD/MM/YYYY", "DD-MM-YYYY"] as const;
+export const dateFormats = ["YYYY-MM-DD", "YYYY-MM-DD hh:mm:ss", "DD/MM/YYYY", "DD-MM-YYYY"] as const;
 export const decimalFormats = ["decimal_comma", "decimal_dot"] as const;
 export type DateFormat = (typeof dateFormats)[number];
 export type DecimalFormat = (typeof decimalFormats)[number];

@@ -2,6 +2,23 @@ import type { ParsedCsv } from "./model";
 
 const delimiters = [",", ";", "\t"];
 
+export function decodeCsv(bytes: Uint8Array): string {
+  if (bytes.length >= 2 && bytes[0] === 0xff && bytes[1] === 0xfe) {
+    return new TextDecoder("utf-16le", { fatal: true }).decode(bytes);
+  }
+
+  if (bytes.length >= 2 && bytes[0] === 0xfe && bytes[1] === 0xff) {
+    return new TextDecoder("utf-16be", { fatal: true }).decode(bytes);
+  }
+
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    // Windows-1252 is still common in CSV exports from banks and spreadsheet apps.
+    return new TextDecoder("windows-1252", { fatal: true }).decode(bytes);
+  }
+}
+
 function countDelimiter(line: string, delimiter: string): number {
   let count = 0; let quoted = false;
   for (let index = 0; index < line.length; index += 1) { if (line[index] === '"') quoted = !quoted; else if (!quoted && line[index] === delimiter) count += 1; }

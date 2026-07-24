@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { openDatabase } from "@/db/connection";
 import { runMigrations } from "@/db/migrate";
 import { createAccountRepository } from "@/features/accounts/repository";
-import { parseCsv } from "./csv";
+import { decodeCsv, parseCsv } from "./csv";
 import type { CsvMapping } from "./model";
 import { parseLocalizedDate, parseLocalizedMoney } from "./normalization";
 import { createImportRepository } from "./repository";
@@ -22,6 +22,23 @@ const mapping: CsvMapping = { dateColumn: "Date", descriptionColumn: "Descriptio
 const csvText = 'Date;Description;Amount;Merchant\n21/07/2026;"Market, central";-1.234,56;Shop\n22/07/2026;Salary;2.000,00;Employer\n31/02/2026;Bad row;5,00;Nowhere\n';
 
 describe("CSV parsing and normalization", () => {
+  it("decodes UTF-8 and legacy Windows-1252 bank exports", () => {
+    const utf8 = new TextEncoder().encode("Descrição;Amount\nCafé;-1,00\n");
+    const windows1252 = Uint8Array.from([
+      0x44, 0x65, 0x73, 0x63, 0x72, 0x69, 0xe7, 0xe3, 0x6f, 0x3b, 0x41, 0x6d, 0x6f, 0x75, 0x6e, 0x74,
+      0x0a, 0x43, 0x61, 0x66, 0xe9, 0x3b, 0x2d, 0x31, 0x2c, 0x30, 0x30, 0x0a,
+    ]);
+
+    expect(decodeCsv(utf8)).toContain("Descrição");
+    expect(decodeCsv(windows1252)).toBe("Descrição;Amount\nCafé;-1,00\n");
+  });
+  it("honors UTF-16 byte-order marks", () => {
+    const utf16le = Uint8Array.from([0xff, 0xfe, 0x44, 0x00, 0x61, 0x00, 0x74, 0x00, 0x65, 0x00]);
+    const utf16be = Uint8Array.from([0xfe, 0xff, 0x00, 0x44, 0x00, 0x61, 0x00, 0x74, 0x00, 0x65]);
+
+    expect(decodeCsv(utf16le)).toBe("Date");
+    expect(decodeCsv(utf16be)).toBe("Date");
+  });
   it("parses quoted CSV fields and detects delimiters", () => {
     const csv = parseCsv(csvText); expect(csv.delimiter).toBe(";"); expect(csv.headers).toEqual(["Date", "Description", "Amount", "Merchant"]); expect(csv.rows[0].Description).toBe("Market, central");
   });
@@ -31,9 +48,12 @@ describe("CSV parsing and normalization", () => {
   });
   it("parses required date formats and rejects impossible dates", () => {
     expect(parseLocalizedDate("2026-07-21", "YYYY-MM-DD")).toBe("2026-07-21");
+    expect(parseLocalizedDate("2026-07-21 14:30:59", "YYYY-MM-DD hh:mm:ss")).toBe("2026-07-21");
     expect(parseLocalizedDate("21/07/2026", "DD/MM/YYYY")).toBe("2026-07-21");
     expect(parseLocalizedDate("21-07-2026", "DD-MM-YYYY")).toBe("2026-07-21");
     expect(parseLocalizedDate("31/02/2026", "DD/MM/YYYY")).toBeNull();
+    expect(parseLocalizedDate("2026-07-21 24:00:00", "YYYY-MM-DD hh:mm:ss")).toBeNull();
+    expect(parseLocalizedDate("2026-02-31 14:30:00", "YYYY-MM-DD hh:mm:ss")).toBeNull();
   });
 });
 
