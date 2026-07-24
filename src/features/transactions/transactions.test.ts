@@ -7,7 +7,7 @@ import { runMigrations } from "@/db/migrate";
 import { createAccountRepository } from "@/features/accounts/repository";
 import { createTransactionRepository, type TransactionWrite } from "./repository";
 import { calculateMonthlyTotals } from "./totals";
-import { normalizeDescription, transactionInputSchema } from "./validation";
+import { normalizeDescription, parseTransactionFilterAmount, transactionInputSchema } from "./validation";
 
 const directories: string[] = [];
 afterEach(() => { for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }); });
@@ -54,6 +54,20 @@ describe("transaction repository", () => {
       expect(repository.list({ flow: "spending", dateFrom: "2026-07-01", dateTo: "2026-07-31", page: 1, pageSize: 20 }).totalCount).toBe(2);
     } finally { database.close(); }
   });
+
+  it("filters signed transaction amounts by equal, more, and less comparisons", () => {
+    const { database, repository, account } = setup();
+    try {
+      repository.create({ ...base(account.id), description: "Small expense", amountCents: -2500 });
+      repository.create({ ...base(account.id), description: "Exact expense", amountCents: -5000 });
+      repository.create({ ...base(account.id), description: "Large expense", amountCents: -7500 });
+      repository.create({ ...base(account.id), description: "Income", amountCents: 10000, transactionType: "income", categoryId: "category-salary" });
+
+      expect(repository.list({ amountComparison: "equal", amountCents: -5000, page: 1, pageSize: 20 }).items.map((item) => item.description)).toEqual(["Exact expense"]);
+      expect(repository.list({ amountComparison: "more", amountCents: -5000, page: 1, pageSize: 20 }).items.map((item) => item.description)).toEqual(["Income", "Small expense"]);
+      expect(repository.list({ amountComparison: "less", amountCents: -5000, page: 1, pageSize: 20 }).items.map((item) => item.description)).toEqual(["Large expense"]);
+    } finally { database.close(); }
+  });
 });
 
 describe("transaction domain", () => {
@@ -65,6 +79,9 @@ describe("transaction domain", () => {
     expect(transactionInputSchema.safeParse({ ...valid, amount: "12.50" }).success).toBe(false);
     expect(transactionInputSchema.safeParse({ ...valid, transactionType: "income", amount: "-1" }).success).toBe(false);
     expect(transactionInputSchema.safeParse({ ...valid, amount: "0" }).success).toBe(false);
+    expect(parseTransactionFilterAmount("-50.25")).toBe(-5025);
+    expect(parseTransactionFilterAmount("0")).toBe(0);
+    expect(parseTransactionFilterAmount("12.345")).toBeUndefined();
   });
 
   it("calculates totals deterministically", () => {

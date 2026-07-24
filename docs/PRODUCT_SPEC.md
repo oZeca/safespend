@@ -51,7 +51,7 @@ Safe to spend is the main visual priority.
 
 - Paginated list
 - Search by description or merchant
-- Filter by date, account, category, and type
+- Filter by date, account, category, type, and signed amount (equal to, more than, or less than)
 - Edit category and type
 - Split across categories
 - Mark recurring or transfer

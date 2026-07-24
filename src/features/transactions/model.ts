@@ -13,6 +13,11 @@ export interface Transaction {
 }
 
 export type TransactionFlow = "spending" | "actual";
-export interface TransactionFilters { search?: string; accountId?: string; categoryId?: string; transactionType?: TransactionType; flow?: TransactionFlow; dateFrom?: string; dateTo?: string; page: number; pageSize: number; }
+export const amountComparisons = ["equal", "more", "less"] as const;
+export type AmountComparison = (typeof amountComparisons)[number];
+export interface TransactionFilters {
+  search?: string; accountId?: string; categoryId?: string; transactionType?: TransactionType; flow?: TransactionFlow; dateFrom?: string; dateTo?: string;
+  amountComparison?: AmountComparison; amountCents?: number; page: number; pageSize: number;
+}
 export interface TransactionPage { items: Transaction[]; totalCount: number; page: number; pageSize: number; totalPages: number; }
 export interface MonthlyTotals { month: string; incomeCents: number; expenseCents: number; savingsCents: number; }

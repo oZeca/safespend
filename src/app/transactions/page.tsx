@@ -6,11 +6,11 @@ import { deleteTransactionAction } from "@/features/transactions/actions";
 import { DeleteTransactionButton } from "@/features/transactions/delete-button";
 import { transactionTypeLabels, type TransactionFilters } from "@/features/transactions/model";
 import { getTransactionRepository } from "@/features/transactions/server-repository";
-import { isTransactionType } from "@/features/transactions/validation";
+import { isAmountComparison, isTransactionType, parseTransactionFilterAmount } from "@/features/transactions/validation";
 import { localMonthString } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
-type Params = { search?: string; account?: string; category?: string; type?: string; from?: string; to?: string; page?: string; month?: string; status?: string; suggest?: string };
+type Params = { search?: string; account?: string; category?: string; type?: string; from?: string; to?: string; amountComparison?: string; amount?: string; page?: string; month?: string; status?: string; suggest?: string };
 const statuses: Record<string, string> = { created: "Transaction created.", updated: "Transaction updated.", deleted: "Transaction deleted.", "delete-error": "The transaction could not be deleted." };
 function validDate(value?: string) { if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return undefined; const [year, month, day] = value.split("-").map(Number); const date = new Date(Date.UTC(year, month - 1, day)); return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day ? value : undefined; }
 function validMonth(value?: string) { return value && /^\d{4}-(0[1-9]|1[0-2])$/.test(value) ? value : localMonthString(); }
@@ -20,9 +20,13 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
   const params = await searchParams; const repository = getTransactionRepository(); const options = repository.listOptions();
   const suggestedTransaction = params.suggest ? repository.findById(params.suggest) : null;
   const suggestionQuery = suggestedTransaction?.categoryId ? new URLSearchParams({ name: `Categorize ${suggestedTransaction.description}`.slice(0, 100), matchField: "normalized_description", matchType: "exact", pattern: suggestedTransaction.normalizedDescription, categoryId: suggestedTransaction.categoryId, transactionType: suggestedTransaction.transactionType, priority: "100" }) : null;
-  const requestedPage = Number.parseInt(params.page ?? "1", 10); const filters: TransactionFilters = { search: params.search?.trim() || undefined, accountId: params.account || undefined, categoryId: params.category || undefined,
+  const requestedPage = Number.parseInt(params.page ?? "1", 10);
+  const amountCents = parseTransactionFilterAmount(params.amount);
+  const amountFilterError = params.amount?.trim() && amountCents === undefined ? "Enter a valid amount with at most 2 decimal places." : null;
+  const filters: TransactionFilters = { search: params.search?.trim() || undefined, accountId: params.account || undefined, categoryId: params.category || undefined,
     transactionType: isTransactionType(params.type) ? params.type : undefined, flow: params.type === "spending" || params.type === "actual" ? params.type : undefined,
-    dateFrom: validDate(params.from), dateTo: validDate(params.to), page: Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1, pageSize: 20 };
+    dateFrom: validDate(params.from), dateTo: validDate(params.to), amountComparison: isAmountComparison(params.amountComparison) ? params.amountComparison : undefined,
+    amountCents, page: Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1, pageSize: 20 };
   const result = repository.list(filters); const month = validMonth(params.month); const totals = repository.monthlyTotals(month);
   return <section className="mx-auto max-w-6xl space-y-7">
     <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-sm font-medium text-primary">Transactions</p><h1 className="text-3xl font-semibold tracking-tight">Money in and out</h1><p className="mt-2 text-sm text-muted-foreground">Search, categorize, and review manual transactions.</p></div><Button asChild><Link href="/transactions/new"><Plus className="mr-2 h-4 w-4" />Add transaction</Link></Button></div>
@@ -35,7 +39,11 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
       <label><span className="sr-only">Transaction type</span><select className="h-10 w-full rounded-md border bg-background px-3 text-sm" defaultValue={params.type ?? ""} name="type"><option value="">All types</option><option value="actual">Income, expenses, and refunds</option><option value="spending">Expenses and refunds</option>{Object.entries(transactionTypeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
       <label className="flex items-center gap-2 text-sm"><span>From</span><input className="h-10 min-w-0 flex-1 rounded-md border bg-background px-2" defaultValue={params.from} name="from" type="date" /></label>
       <label className="flex items-center gap-2 text-sm"><span>To</span><input className="h-10 min-w-0 flex-1 rounded-md border bg-background px-2" defaultValue={params.to} name="to" type="date" /></label>
+      <label><span className="sr-only">Amount comparison</span><select className="h-10 w-full rounded-md border bg-background px-3 text-sm" defaultValue={params.amountComparison ?? "equal"} name="amountComparison"><option value="equal">Amount equals</option><option value="more">Amount more than</option><option value="less">Amount less than</option></select></label>
+      <label className="text-sm"><span className="sr-only">Transaction amount</span><input aria-describedby="amount-filter-help amount-filter-error" aria-invalid={amountFilterError ? true : undefined} className="h-10 w-full rounded-md border bg-background px-3" defaultValue={params.amount} inputMode="decimal" name="amount" placeholder="Amount, e.g. -50.00" /></label>
       <label className="flex items-center gap-2 text-sm"><span>Totals</span><input className="h-10 min-w-0 flex-1 rounded-md border bg-background px-2" defaultValue={month} name="month" type="month" /></label>
+      <p className="text-xs text-muted-foreground sm:col-span-2 lg:col-span-3" id="amount-filter-help">Use a negative amount for money out and a positive amount for money in.</p>
+      {amountFilterError && <p className="text-sm text-red-700 sm:col-span-2 lg:col-span-4" id="amount-filter-error" role="alert">{amountFilterError}</p>}
       <div className="flex gap-2 lg:col-span-4"><Button type="submit">Apply filters</Button><Button asChild variant="outline"><Link href="/transactions">Clear</Link></Button></div>
     </form>
     <div className="grid gap-4 sm:grid-cols-3"><div className="rounded-xl border bg-card p-5"><p className="text-sm text-muted-foreground">Income · {month}</p><p className="mt-2 text-2xl font-semibold tabular-nums text-emerald-700">{formatCurrency(totals.incomeCents)}</p></div><div className="rounded-xl border bg-card p-5"><p className="text-sm text-muted-foreground">Expenses · {month}</p><p className="mt-2 text-2xl font-semibold tabular-nums">{formatCurrency(totals.expenseCents)}</p></div><div className="rounded-xl border bg-card p-5"><p className="text-sm text-muted-foreground">Savings · {month}</p><p className={`mt-2 text-2xl font-semibold tabular-nums ${totals.savingsCents >= 0 ? "text-emerald-700" : "text-red-700"}`}>{formatCurrency(totals.savingsCents)}</p></div></div>

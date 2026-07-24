@@ -51,6 +51,11 @@ export function createTransactionRepository(database: Database.Database, options
       if (filters.flow === "actual") where.push("t.transaction_type IN ('income', 'expense', 'refund')");
       if (filters.dateFrom) { where.push("t.date >= @dateFrom"); parameters.dateFrom = filters.dateFrom; }
       if (filters.dateTo) { where.push("t.date <= @dateTo"); parameters.dateTo = filters.dateTo; }
+      if (filters.amountComparison && filters.amountCents !== undefined) {
+        const operator = filters.amountComparison === "equal" ? "=" : filters.amountComparison === "more" ? ">" : "<";
+        where.push(`t.amount_cents ${operator} @amountCents`);
+        parameters.amountCents = filters.amountCents;
+      }
       const clause = `WHERE ${where.join(" AND ")}`;
       const totalCount = (database.prepare(`SELECT COUNT(*) AS count FROM transactions t ${clause}`).get(parameters) as { count: number }).count;
       const totalPages = Math.max(1, Math.ceil(totalCount / filters.pageSize)); const page = Math.min(filters.page, totalPages);

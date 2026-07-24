@@ -30,6 +30,17 @@ test("creates, edits, filters, and deletes a transaction", async ({ page }) => {
   const updated = page.getByRole("article").filter({ hasText: `${description} updated` });
   await expect(updated).toBeVisible();
 
+  await page.getByLabel("Amount comparison").selectOption("equal");
+  await page.getByLabel("Transaction amount").fill("-50.00");
+  await page.getByRole("button", { name: "Apply filters" }).click();
+  await expect(updated).toBeVisible();
+  await page.getByLabel("Amount comparison").selectOption("less");
+  await page.getByRole("button", { name: "Apply filters" }).click();
+  await expect(page.getByText(`${description} updated`)).toHaveCount(0);
+
+  await page.getByLabel("Amount comparison").selectOption("equal");
+  await page.getByLabel("Transaction amount").fill("-50.00");
+  await page.getByRole("button", { name: "Apply filters" }).click();
   page.once("dialog", (dialog) => dialog.accept());
   await updated.getByRole("button", { name: "Delete" }).click();
   await expect(page.getByText("Transaction deleted.")).toBeVisible();
