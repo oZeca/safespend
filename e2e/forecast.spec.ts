@@ -40,9 +40,24 @@ test("configures forecast assumptions and shows explained safe-to-spend", async 
   await recurringSection.getByRole("button", { name: "Add recurring item" }).click();
   await expect(page.getByText("Recurring item added.")).toBeVisible();
 
+  await recurringSection.getByRole("link", { name: `Edit ${recurringName}` }).click();
+  const updatedRecurringName = `Updated recurring rent ${unique}`;
+  await page.getByLabel("Name").fill(updatedRecurringName);
+  await page.getByLabel("Amount").fill("125.00");
+  await page.getByRole("button", { name: "Save recurring item" }).click();
+  await expect(page.getByText("Recurring item updated.")).toBeVisible();
+  await expect(page.getByText(updatedRecurringName)).toBeVisible();
+
+  await page.getByRole("link", { name: "Monthly" }).click();
+  await expect(page.getByRole("link", { name: "Monthly" })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByText(updatedRecurringName)).toBeVisible();
+  await page.getByRole("link", { name: "Yearly" }).click();
+  await expect(page.getByRole("link", { name: "Yearly" })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByText(updatedRecurringName)).not.toBeVisible();
+
   await page.goto("/dashboard");
   await expect(page.getByText("Safe to spend for the rest of this month")).toBeVisible();
   await expect(page.getByText("How safe-to-spend was calculated")).toBeVisible();
-  await expect(page.getByText(recurringName)).toBeVisible();
+  await expect(page.getByText(updatedRecurringName)).toBeVisible();
   await expect(page.getByText("Forecasted target-date savings")).toBeVisible();
 });

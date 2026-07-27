@@ -1,4 +1,5 @@
-import { Trash2 } from "lucide-react";
+import Link from "next/link";
+import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/features/accounts/money";
 import { createIncomeAction, createPlannedExpenseAction, createRecurringAction, deleteAssumptionAction, saveGoalAction } from "@/features/forecasting/actions";
@@ -12,6 +13,7 @@ const statuses: Record<string, string> = {
   "income-added": "Expected income added.",
   "expense-added": "Planned expense added.",
   "recurring-added": "Recurring item added.",
+  "recurring-updated": "Recurring item updated.",
   "assumption-deleted": "Forecast assumption removed."
 };
 
@@ -19,10 +21,12 @@ function DeleteForm({ id, kind }: { id: string; kind: "income" | "expense" | "re
   return <form action={deleteAssumptionAction}><input name="id" type="hidden" value={id} /><input name="kind" type="hidden" value={kind} /><Button aria-label="Remove assumption" size="sm" type="submit" variant="outline"><Trash2 className="h-4 w-4" /></Button></form>;
 }
 
-export default async function ForecastPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
-  const { status } = await searchParams;
+export default async function ForecastPage({ searchParams }: { searchParams: Promise<{ status?: string; frequency?: string }> }) {
+  const { status, frequency: frequencyParam } = await searchParams;
   const repository = getForecastRepository();
   const configuration = repository.getConfiguration();
+  const frequency = frequencyParam === "monthly" || frequencyParam === "yearly" ? frequencyParam : "all";
+  const recurringItems = frequency === "all" ? configuration.recurringItems : configuration.recurringItems.filter((item) => item.frequency === frequency);
   const today = localDateString();
   const tomorrowDate = new Date(`${today}T00:00:00.000Z`); tomorrowDate.setUTCDate(tomorrowDate.getUTCDate() + 1);
   const tomorrow = tomorrowDate.toISOString().slice(0, 10);
@@ -49,7 +53,10 @@ export default async function ForecastPage({ searchParams }: { searchParams: Pro
     </div>
 
     <section className="space-y-4 rounded-xl border bg-card p-5 shadow-sm sm:p-7"><div><h2 className="text-xl font-semibold">Recurring items</h2><p className="mt-1 text-sm text-muted-foreground">Expected fixed income and payments generated from the next date through the optional end date or goal date.</p></div><RecurringForm action={createRecurringAction} defaultDate={tomorrow} />
-      {configuration.recurringItems.length ? <div className="grid gap-3 sm:grid-cols-2">{configuration.recurringItems.map((item) => <div className="flex items-center gap-3 rounded-md bg-muted p-3 text-sm" key={item.id}><span><span className="font-medium">{item.name}</span><span className="block text-xs capitalize text-muted-foreground">{item.frequency} {item.transactionType} · next {item.nextExpectedDate}{item.endDate ? ` · ends ${item.endDate}` : ""}</span></span><span className={`ml-auto font-medium tabular-nums ${item.transactionType === "income" ? "text-emerald-700" : ""}`}>{formatCurrency(Math.abs(item.expectedAmountCents))}</span><DeleteForm id={item.id} kind="recurring" /></div>)}</div> : <p className="text-sm text-muted-foreground">No recurring assumptions.</p>}
+      <nav aria-label="Filter recurring items by frequency" className="flex flex-wrap gap-2">
+        {(["all", "monthly", "yearly"] as const).map((option) => <Button asChild key={option} size="sm" variant={frequency === option ? "default" : "outline"}><Link aria-current={frequency === option ? "page" : undefined} href={option === "all" ? "/forecast" : `/forecast?frequency=${option}`}>{option === "all" ? "All" : option === "monthly" ? "Monthly" : "Yearly"}</Link></Button>)}
+      </nav>
+      {recurringItems.length ? <div className="grid gap-3 sm:grid-cols-2">{recurringItems.map((item) => <div className="flex items-center gap-3 rounded-md bg-muted p-3 text-sm" key={item.id}><span><span className="font-medium">{item.name}</span><span className="block text-xs capitalize text-muted-foreground">{item.frequency} {item.transactionType} · next {item.nextExpectedDate}{item.endDate ? ` · ends ${item.endDate}` : ""}</span></span><span className={`ml-auto font-medium tabular-nums ${item.transactionType === "income" ? "text-emerald-700" : ""}`}>{formatCurrency(Math.abs(item.expectedAmountCents))}</span><Button asChild aria-label={`Edit ${item.name}`} size="sm" variant="outline"><Link href={`/forecast/recurring/${item.id}/edit`}><Pencil className="h-4 w-4" /></Link></Button><DeleteForm id={item.id} kind="recurring" /></div>)}</div> : <p className="text-sm text-muted-foreground">No {frequency === "all" ? "" : `${frequency} `}recurring assumptions.</p>}
     </section>
   </section>;
 }

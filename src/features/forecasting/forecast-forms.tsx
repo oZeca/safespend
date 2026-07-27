@@ -5,7 +5,7 @@ import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { formatMoneyInput } from "@/features/accounts/validation";
 import type { ForecastFormState } from "./actions";
-import type { SavingsGoal } from "./model";
+import type { RecurringItem, SavingsGoal } from "./model";
 
 type Action = (state: ForecastFormState, formData: FormData) => Promise<ForecastFormState>;
 const inputClass = "h-10 w-full rounded-md border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
@@ -47,9 +47,13 @@ function AssumptionForm({ action, kind, defaultDate }: { action: Action; kind: "
 export function IncomeForm(props: { action: Action; defaultDate: string }) { return <AssumptionForm {...props} kind="income" />; }
 export function PlannedExpenseForm(props: { action: Action; defaultDate: string }) { return <AssumptionForm {...props} kind="expense" />; }
 
-export function RecurringForm({ action, defaultDate }: { action: Action; defaultDate: string }) {
+export function RecurringForm({ action, defaultDate, item }: { action: Action; defaultDate: string; item?: RecurringItem }) {
   const [state, formAction] = useActionState(action, {});
-  const value = (key: string, fallback = "") => state.values?.[key] ?? fallback;
+  const defaults: Record<string, string> = item ? {
+    name: item.name, transactionType: item.transactionType, amount: formatMoneyInput(Math.abs(item.expectedAmountCents)),
+    frequency: item.frequency, nextExpectedDate: item.nextExpectedDate, endDate: item.endDate ?? ""
+  } : {};
+  const value = (key: string, fallback = "") => state.values?.[key] ?? defaults[key] ?? fallback;
   return <form action={formAction} className="space-y-3 rounded-md border p-4">
     <Alert state={state} />
     <label className="space-y-1"><span className="text-sm font-medium">Name</span><input className={inputClass} defaultValue={value("name")} name="name" placeholder="Rent" /><ErrorMessage errors={state.errors?.name} /></label>
@@ -60,6 +64,6 @@ export function RecurringForm({ action, defaultDate }: { action: Action; default
       <label className="space-y-1"><span className="text-sm font-medium">Next date</span><input className={inputClass} defaultValue={value("nextExpectedDate", defaultDate)} name="nextExpectedDate" type="date" /><ErrorMessage errors={state.errors?.nextExpectedDate} /></label>
       <label className="space-y-1"><span className="text-sm font-medium">End date <span className="font-normal text-muted-foreground">(optional)</span></span><input className={inputClass} defaultValue={value("endDate")} name="endDate" type="date" /><ErrorMessage errors={state.errors?.endDate} /></label>
     </div>
-    <div className="flex justify-end"><Submit>Add recurring item</Submit></div>
+    <div className="flex justify-end"><Submit>{item ? "Save recurring item" : "Add recurring item"}</Submit></div>
   </form>;
 }

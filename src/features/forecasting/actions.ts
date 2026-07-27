@@ -65,6 +65,22 @@ export async function createRecurringAction(_state: ForecastFormState, formData:
   refresh(); redirect("/forecast?status=recurring-added");
 }
 
+export async function updateRecurringAction(id: string, _state: ForecastFormState, formData: FormData): Promise<ForecastFormState> {
+  const values = formValues(formData, ["name", "transactionType", "amount", "frequency", "nextExpectedDate", "endDate"]);
+  const result = recurringInputSchema.safeParse(values);
+  if (!result.success) return { message: "Check the recurring item fields.", errors: result.error.flatten().fieldErrors, values };
+  const cents = parseMoneyToCents(result.data.amount)!;
+  try {
+    const updated = getForecastRepository().updateRecurring(id, {
+      name: result.data.name, transactionType: result.data.transactionType,
+      expectedAmountCents: result.data.transactionType === "expense" ? -cents : cents,
+      frequency: result.data.frequency, nextExpectedDate: result.data.nextExpectedDate, endDate: result.data.endDate || null
+    });
+    if (!updated) return { message: "This recurring item no longer exists.", values };
+  } catch (error) { console.error("Failed to update recurring item", error); return { message: "The recurring item could not be saved.", values }; }
+  refresh(); redirect("/forecast?status=recurring-updated");
+}
+
 export async function deleteAssumptionAction(formData: FormData): Promise<void> {
   const kind = formData.get("kind");
   const id = formData.get("id");

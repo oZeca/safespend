@@ -102,6 +102,20 @@ export function createForecastRepository(database: Database.Database, options: F
         frequency, next_expected_date AS nextExpectedDate, end_date AS endDate FROM recurring_items WHERE id = ?`).get(id) as RecurringItem;
     },
 
+    findRecurringById(id: string): RecurringItem | null {
+      return database.prepare(`SELECT id, name, transaction_type AS transactionType, expected_amount_cents AS expectedAmountCents,
+        frequency, next_expected_date AS nextExpectedDate, end_date AS endDate FROM recurring_items WHERE id = ? AND is_enabled = 1`)
+        .get(id) as RecurringItem | undefined ?? null;
+    },
+
+    updateRecurring(id: string, input: RecurringWrite): RecurringItem | null {
+      const timestamp = now().toISOString();
+      const result = database.prepare(`UPDATE recurring_items SET name = ?, transaction_type = ?, expected_amount_cents = ?, frequency = ?,
+        next_expected_date = ?, end_date = ?, updated_at = ? WHERE id = ? AND is_enabled = 1`)
+        .run(input.name, input.transactionType, input.expectedAmountCents, input.frequency, input.nextExpectedDate, input.endDate, timestamp, id);
+      return result.changes === 1 ? this.findRecurringById(id) : null;
+    },
+
     deleteAssumption(kind: "income" | "expense" | "recurring", id: string): boolean {
       const table = kind === "income" ? "income_expectations" : kind === "expense" ? "planned_expenses" : "recurring_items";
       return database.prepare(`DELETE FROM ${table} WHERE id = ?`).run(id).changes === 1;
