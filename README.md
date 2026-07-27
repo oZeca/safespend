@@ -82,7 +82,7 @@ Current-month totals include transactions dated anywhere in the calendar month. 
 
 ## Savings goal and forecast
 
-The Forecast page manages one active annual savings goal, its starting saved amount, optional investment-transfer credit, and a minimum cash buffer. Expected income and planned expenses are dated one-time assumptions. Recurring income and expenses can be edited, removed, or filtered between monthly and yearly schedules; they support weekly, monthly, quarterly, and yearly frequencies with an optional end date.
+The Forecast page manages one active annual savings goal, its starting saved amount, optional investment-transfer credit, and a minimum cash buffer. Expected income and planned expenses are editable dated one-time assumptions. Recurring income and expenses can be edited, removed, or filtered between monthly and yearly schedules; they support weekly, monthly, quarterly, and yearly frequencies with an optional end date.
 
 Safe-to-spend is calculated in integer cents:
 

@@ -86,11 +86,33 @@ export function createForecastRepository(database: Database.Database, options: F
       return database.prepare("SELECT id, name, expected_date AS expectedDate, amount_cents AS amountCents FROM income_expectations WHERE id = ?").get(id) as IncomeExpectation;
     },
 
+    findIncomeById(id: string): IncomeExpectation | null {
+      return database.prepare("SELECT id, name, expected_date AS expectedDate, amount_cents AS amountCents FROM income_expectations WHERE id = ?")
+        .get(id) as IncomeExpectation | undefined ?? null;
+    },
+
+    updateIncome(id: string, input: IncomeWrite): IncomeExpectation | null {
+      const result = database.prepare("UPDATE income_expectations SET name = ?, expected_date = ?, amount_cents = ?, updated_at = ? WHERE id = ?")
+        .run(input.name, input.expectedDate, input.amountCents, now().toISOString(), id);
+      return result.changes === 1 ? this.findIncomeById(id) : null;
+    },
+
     createPlannedExpense(input: PlannedExpenseWrite): PlannedExpense {
       const id = makeId(); const timestamp = now().toISOString();
       database.prepare(`INSERT INTO planned_expenses (id, name, expected_date, amount_cents, category_id, scenario, is_committed, created_at, updated_at)
         VALUES (?, ?, ?, ?, NULL, 'expected', 0, ?, ?)`).run(id, input.name, input.expectedDate, input.amountCents, timestamp, timestamp);
       return database.prepare("SELECT id, name, expected_date AS expectedDate, amount_cents AS amountCents FROM planned_expenses WHERE id = ?").get(id) as PlannedExpense;
+    },
+
+    findPlannedExpenseById(id: string): PlannedExpense | null {
+      return database.prepare("SELECT id, name, expected_date AS expectedDate, amount_cents AS amountCents FROM planned_expenses WHERE id = ?")
+        .get(id) as PlannedExpense | undefined ?? null;
+    },
+
+    updatePlannedExpense(id: string, input: PlannedExpenseWrite): PlannedExpense | null {
+      const result = database.prepare("UPDATE planned_expenses SET name = ?, expected_date = ?, amount_cents = ?, updated_at = ? WHERE id = ?")
+        .run(input.name, input.expectedDate, input.amountCents, now().toISOString(), id);
+      return result.changes === 1 ? this.findPlannedExpenseById(id) : null;
     },
 
     createRecurring(input: RecurringWrite): RecurringItem {

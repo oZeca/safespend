@@ -11,7 +11,9 @@ export const dynamic = "force-dynamic";
 const statuses: Record<string, string> = {
   "goal-saved": "Savings goal and cash buffer saved.",
   "income-added": "Expected income added.",
+  "income-updated": "Expected income updated.",
   "expense-added": "Planned expense added.",
+  "expense-updated": "Planned expense updated.",
   "recurring-added": "Recurring item added.",
   "recurring-updated": "Recurring item updated.",
   "assumption-deleted": "Forecast assumption removed."
@@ -45,10 +47,10 @@ export default async function ForecastPage({ searchParams }: { searchParams: Pro
 
     <div className="grid gap-6 lg:grid-cols-2">
       <section className="space-y-4 rounded-xl border bg-card p-5 shadow-sm"><div><h2 className="text-lg font-semibold">Expected income</h2><p className="text-sm text-muted-foreground">One-time income not already recorded as a transaction.</p></div><IncomeForm action={createIncomeAction} defaultDate={tomorrow} />
-        {configuration.incomeExpectations.length ? <div className="space-y-2">{configuration.incomeExpectations.map((item) => <div className="flex items-center justify-between gap-3 rounded-md bg-muted p-3 text-sm" key={item.id}><span><span className="font-medium">{item.name}</span><span className="block text-xs text-muted-foreground">{item.expectedDate}</span></span><span className="ml-auto font-medium tabular-nums text-emerald-700">{formatCurrency(item.amountCents)}</span><DeleteForm id={item.id} kind="income" /></div>)}</div> : <p className="text-sm text-muted-foreground">No expected income assumptions.</p>}
+        {configuration.incomeExpectations.length ? <div className="space-y-2">{configuration.incomeExpectations.map((item) => <div className="flex items-center justify-between gap-3 rounded-md bg-muted p-3 text-sm" key={item.id}><span><span className="font-medium">{item.name}</span><span className="block text-xs text-muted-foreground">{item.expectedDate}</span></span><span className="ml-auto font-medium tabular-nums text-emerald-700">{formatCurrency(item.amountCents)}</span><Button asChild aria-label={`Edit ${item.name}`} size="sm" variant="outline"><Link href={`/forecast/income/${item.id}/edit`}><Pencil className="h-4 w-4" /></Link></Button><DeleteForm id={item.id} kind="income" /></div>)}</div> : <p className="text-sm text-muted-foreground">No expected income assumptions.</p>}
       </section>
       <section className="space-y-4 rounded-xl border bg-card p-5 shadow-sm"><div><h2 className="text-lg font-semibold">Planned expenses</h2><p className="text-sm text-muted-foreground">Known one-time commitments not already recorded.</p></div><PlannedExpenseForm action={createPlannedExpenseAction} defaultDate={tomorrow} />
-        {configuration.plannedExpenses.length ? <div className="space-y-2">{configuration.plannedExpenses.map((item) => <div className="flex items-center justify-between gap-3 rounded-md bg-muted p-3 text-sm" key={item.id}><span><span className="font-medium">{item.name}</span><span className="block text-xs text-muted-foreground">{item.expectedDate}</span></span><span className="ml-auto font-medium tabular-nums">{formatCurrency(item.amountCents)}</span><DeleteForm id={item.id} kind="expense" /></div>)}</div> : <p className="text-sm text-muted-foreground">No planned expense assumptions.</p>}
+        {configuration.plannedExpenses.length ? <div className="space-y-2">{configuration.plannedExpenses.map((item) => <div className="flex items-center justify-between gap-3 rounded-md bg-muted p-3 text-sm" key={item.id}><span><span className="font-medium">{item.name}</span><span className="block text-xs text-muted-foreground">{item.expectedDate}</span></span><span className="ml-auto font-medium tabular-nums">{formatCurrency(item.amountCents)}</span><Button asChild aria-label={`Edit ${item.name}`} size="sm" variant="outline"><Link href={`/forecast/expenses/${item.id}/edit`}><Pencil className="h-4 w-4" /></Link></Button><DeleteForm id={item.id} kind="expense" /></div>)}</div> : <p className="text-sm text-muted-foreground">No planned expense assumptions.</p>}
       </section>
     </div>
 

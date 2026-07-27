@@ -41,6 +41,17 @@ export async function createIncomeAction(_state: ForecastFormState, formData: Fo
   refresh(); redirect("/forecast?status=income-added");
 }
 
+export async function updateIncomeAction(id: string, _state: ForecastFormState, formData: FormData): Promise<ForecastFormState> {
+  const values = formValues(formData, ["name", "expectedDate", "amount"]);
+  const result = incomeInputSchema.safeParse(values);
+  if (!result.success) return { message: "Check the expected income fields.", errors: result.error.flatten().fieldErrors, values };
+  try {
+    const updated = getForecastRepository().updateIncome(id, { name: result.data.name, expectedDate: result.data.expectedDate, amountCents: parseMoneyToCents(result.data.amount)! });
+    if (!updated) return { message: "This expected income no longer exists.", values };
+  } catch (error) { console.error("Failed to update income expectation", error); return { message: "The expected income could not be saved.", values }; }
+  refresh(); redirect("/forecast?status=income-updated");
+}
+
 export async function createPlannedExpenseAction(_state: ForecastFormState, formData: FormData): Promise<ForecastFormState> {
   const values = formValues(formData, ["name", "expectedDate", "amount"]);
   const result = plannedExpenseInputSchema.safeParse(values);
@@ -48,6 +59,17 @@ export async function createPlannedExpenseAction(_state: ForecastFormState, form
   try { getForecastRepository().createPlannedExpense({ name: result.data.name, expectedDate: result.data.expectedDate, amountCents: parseMoneyToCents(result.data.amount)! }); }
   catch (error) { console.error("Failed to create planned expense", error); return { message: "The planned expense could not be added.", values }; }
   refresh(); redirect("/forecast?status=expense-added");
+}
+
+export async function updatePlannedExpenseAction(id: string, _state: ForecastFormState, formData: FormData): Promise<ForecastFormState> {
+  const values = formValues(formData, ["name", "expectedDate", "amount"]);
+  const result = plannedExpenseInputSchema.safeParse(values);
+  if (!result.success) return { message: "Check the planned expense fields.", errors: result.error.flatten().fieldErrors, values };
+  try {
+    const updated = getForecastRepository().updatePlannedExpense(id, { name: result.data.name, expectedDate: result.data.expectedDate, amountCents: parseMoneyToCents(result.data.amount)! });
+    if (!updated) return { message: "This planned expense no longer exists.", values };
+  } catch (error) { console.error("Failed to update planned expense", error); return { message: "The planned expense could not be saved.", values }; }
+  refresh(); redirect("/forecast?status=expense-updated");
 }
 
 export async function createRecurringAction(_state: ForecastFormState, formData: FormData): Promise<ForecastFormState> {

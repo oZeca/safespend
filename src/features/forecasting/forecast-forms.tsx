@@ -5,7 +5,7 @@ import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { formatMoneyInput } from "@/features/accounts/validation";
 import type { ForecastFormState } from "./actions";
-import type { RecurringItem, SavingsGoal } from "./model";
+import type { IncomeExpectation, PlannedExpense, RecurringItem, SavingsGoal } from "./model";
 
 type Action = (state: ForecastFormState, formData: FormData) => Promise<ForecastFormState>;
 const inputClass = "h-10 w-full rounded-md border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
@@ -33,19 +33,20 @@ export function GoalForm({ action, goal, minimumBufferCents, defaultStartDate, d
   </form>;
 }
 
-function AssumptionForm({ action, kind, defaultDate }: { action: Action; kind: "income" | "expense"; defaultDate: string }) {
+function AssumptionForm({ action, kind, defaultDate, item }: { action: Action; kind: "income" | "expense"; defaultDate: string; item?: IncomeExpectation | PlannedExpense }) {
   const [state, formAction] = useActionState(action, {});
-  const value = (key: string, fallback = "") => state.values?.[key] ?? fallback;
+  const defaults = item ? { name: item.name, expectedDate: item.expectedDate, amount: formatMoneyInput(item.amountCents) } : {};
+  const value = (key: string, fallback = "") => state.values?.[key] ?? defaults[key as keyof typeof defaults] ?? fallback;
   return <form action={formAction} className="space-y-3 rounded-md border p-4">
     <Alert state={state} />
     <label className="space-y-1"><span className="text-sm font-medium">Name</span><input className={inputClass} defaultValue={value("name")} name="name" placeholder={kind === "income" ? "Bonus" : "Annual insurance"} /><ErrorMessage errors={state.errors?.name} /></label>
     <div className="grid gap-3 sm:grid-cols-2"><label className="space-y-1"><span className="text-sm font-medium">Date</span><input className={inputClass} defaultValue={value("expectedDate", defaultDate)} name="expectedDate" type="date" /><ErrorMessage errors={state.errors?.expectedDate} /></label><label className="space-y-1"><span className="text-sm font-medium">Amount</span><input className={inputClass} defaultValue={value("amount")} inputMode="decimal" name="amount" placeholder="500.00" /><ErrorMessage errors={state.errors?.amount} /></label></div>
-    <div className="flex justify-end"><Submit>{kind === "income" ? "Add expected income" : "Add planned expense"}</Submit></div>
+    <div className="flex justify-end"><Submit>{item ? kind === "income" ? "Save expected income" : "Save planned expense" : kind === "income" ? "Add expected income" : "Add planned expense"}</Submit></div>
   </form>;
 }
 
-export function IncomeForm(props: { action: Action; defaultDate: string }) { return <AssumptionForm {...props} kind="income" />; }
-export function PlannedExpenseForm(props: { action: Action; defaultDate: string }) { return <AssumptionForm {...props} kind="expense" />; }
+export function IncomeForm(props: { action: Action; defaultDate: string; item?: IncomeExpectation }) { return <AssumptionForm {...props} kind="income" />; }
+export function PlannedExpenseForm(props: { action: Action; defaultDate: string; item?: PlannedExpense }) { return <AssumptionForm {...props} kind="expense" />; }
 
 export function RecurringForm({ action, defaultDate, item }: { action: Action; defaultDate: string; item?: RecurringItem }) {
   const [state, formAction] = useActionState(action, {});

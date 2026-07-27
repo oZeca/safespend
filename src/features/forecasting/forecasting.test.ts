@@ -77,12 +77,16 @@ describe("forecast repository and validation", () => {
       let id = 0;
       const repository = createForecastRepository(database, { id: () => `forecast-${++id}`, now: () => new Date("2026-07-23T11:00:00.000Z") });
       repository.saveGoal({ name: "2026 goal", startDate: "2026-01-01", targetDate: "2026-12-31", targetAmountCents: 1000000, startingAmountCents: 10000, includeInvestmentTransfers: true, minimumCashBufferCents: 150000 });
-      repository.createIncome({ name: "Bonus", expectedDate: "2026-08-01", amountCents: 50000 });
-      repository.createPlannedExpense({ name: "Holiday", expectedDate: "2026-09-01", amountCents: 25000 });
+      const income = repository.createIncome({ name: "Bonus", expectedDate: "2026-08-01", amountCents: 50000 });
+      const plannedExpense = repository.createPlannedExpense({ name: "Holiday", expectedDate: "2026-09-01", amountCents: 25000 });
       const recurring = repository.createRecurring({ name: "Rent", transactionType: "expense", expectedAmountCents: -50000, frequency: "monthly", nextExpectedDate: "2026-07-28", endDate: null });
       expect(repository.getConfiguration()).toMatchObject({ minimumCashBufferCents: 150000, incomeExpectations: [{ name: "Bonus" }], plannedExpenses: [{ name: "Holiday" }], recurringItems: [{ name: "Rent" }] });
       expect(repository.updateRecurring(recurring.id, { name: "Salary", transactionType: "income", expectedAmountCents: 250000, frequency: "weekly", nextExpectedDate: "2026-08-01", endDate: "2026-10-01" })).toMatchObject({ name: "Salary", transactionType: "income", expectedAmountCents: 250000, frequency: "weekly", nextExpectedDate: "2026-08-01", endDate: "2026-10-01" });
       expect(repository.findRecurringById(recurring.id)).toMatchObject({ name: "Salary" });
+      expect(repository.updateIncome(income.id, { name: "Updated bonus", expectedDate: "2026-08-02", amountCents: 75000 })).toMatchObject({ name: "Updated bonus", expectedDate: "2026-08-02", amountCents: 75000 });
+      expect(repository.findIncomeById(income.id)).toMatchObject({ name: "Updated bonus" });
+      expect(repository.updatePlannedExpense(plannedExpense.id, { name: "Updated holiday", expectedDate: "2026-09-02", amountCents: 30000 })).toMatchObject({ name: "Updated holiday", expectedDate: "2026-09-02", amountCents: 30000 });
+      expect(repository.findPlannedExpenseById(plannedExpense.id)).toMatchObject({ name: "Updated holiday" });
       expect(repository.forecast("2026-07-23")).toMatchObject({
         availableCashCents: 500000,
         actualSavingsCents: -30000,

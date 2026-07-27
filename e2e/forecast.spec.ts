@@ -32,6 +32,29 @@ test("configures forecast assumptions and shows explained safe-to-spend", async 
   await incomeSection.getByRole("button", { name: "Add expected income" }).click();
   await expect(page.getByText("Expected income added.")).toBeVisible();
 
+  await incomeSection.getByRole("link", { name: `Edit ${incomeName}` }).click();
+  const updatedIncomeName = `Updated expected bonus ${unique}`;
+  await page.getByLabel("Name").fill(updatedIncomeName);
+  await page.getByLabel("Amount").fill("600.00");
+  await page.getByRole("button", { name: "Save expected income" }).click();
+  await expect(page.getByText("Expected income updated.")).toBeVisible();
+  await expect(page.getByText(updatedIncomeName)).toBeVisible();
+
+  const expenseName = `Planned holiday ${unique}`;
+  const expenseSection = page.locator("section").filter({ has: page.getByRole("heading", { name: "Planned expenses" }) }).last();
+  await expenseSection.getByLabel("Name").fill(expenseName);
+  await expenseSection.getByLabel("Date").fill(tomorrowString);
+  await expenseSection.getByLabel("Amount").fill("250.00");
+  await expenseSection.getByRole("button", { name: "Add planned expense" }).click();
+  await expect(page.getByText("Planned expense added.")).toBeVisible();
+  await expenseSection.getByRole("link", { name: `Edit ${expenseName}` }).click();
+  const updatedExpenseName = `Updated planned holiday ${unique}`;
+  await page.getByLabel("Name").fill(updatedExpenseName);
+  await page.getByLabel("Amount").fill("300.00");
+  await page.getByRole("button", { name: "Save planned expense" }).click();
+  await expect(page.getByText("Planned expense updated.")).toBeVisible();
+  await expect(page.getByText(updatedExpenseName)).toBeVisible();
+
   const recurringName = `Recurring rent ${unique}`;
   const recurringSection = page.locator("section").filter({ has: page.getByRole("heading", { name: "Recurring items" }) }).last();
   await recurringSection.getByLabel("Name").fill(recurringName);
