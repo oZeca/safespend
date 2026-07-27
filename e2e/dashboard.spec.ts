@@ -22,8 +22,12 @@ test("shows actual dashboard metrics and drills into matching transactions", asy
   await page.goto("/dashboard");
   await expect(page.getByRole("heading", { name: "Your financial overview" })).toBeVisible();
   await expect(page.getByText(/Safe to spend (this month|for the rest of this month)/)).toBeVisible();
-  await expect(page.getByText("Available cash")).toBeVisible();
+  await expect(page.getByText("Available cash", { exact: true }).first()).toBeVisible();
   await expect(page.getByRole("img", { name: "Monthly income, expenses, and savings chart" })).toBeVisible();
+
+  const availableCashLabel = page.getByText("Available cash", { exact: true }).first();
+  await availableCashLabel.locator("..").getByRole("button", { name: "Show calculation" }).click();
+  await expect(page.getByRole("tooltip").filter({ hasText: "included in available cash" })).toBeVisible();
 
   const incomeCard = page.getByRole("link").filter({ hasText: /income/i }).filter({ hasText: "View transactions" }).first();
   await incomeCard.click();

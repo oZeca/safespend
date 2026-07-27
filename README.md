@@ -76,6 +76,8 @@ The dashboard reports available cash from active accounts opted into that total,
 
 Category spending uses transaction splits when present and otherwise uses the parent category. Refunds reduce the matching category, and uncategorized net spending is called out for review. Metric and category links open the matching filtered transaction list, including transactions represented by splits.
 
+Calculated dashboard values include an information tooltip with their formula, included inputs, and rounding behavior where relevant. Tooltips open on hover, keyboard focus, or tap.
+
 Current-month totals include transactions dated anywhere in the calendar month. Year-to-date savings ends on the dashboard’s local “as of” date.
 
 ## Savings goal and forecast
