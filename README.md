@@ -74,7 +74,7 @@ Rule forms can preview current matches before saving. Enabled rules are applied 
 
 The dashboard reports available cash from active accounts opted into that total, current-month income, net expenses after refunds, current-month savings, and year-to-date savings. Transfers and deleted transactions are excluded from actuals. The current-year chart shows monthly income, expenses, and savings through the current month.
 
-Category spending uses transaction splits when present and otherwise uses the parent category. Refunds reduce the matching category, and uncategorized net spending is called out for review. Metric and category links open the matching filtered transaction list, including transactions represented by splits.
+Category spending shows a year total through the current month and a month-by-month breakdown from January onward. It uses transaction splits when present and otherwise uses the parent category. Refunds reduce the matching category, and uncategorized net spending is called out for review. Every category total and monthly amount links to the matching filtered transaction list, including transactions represented by splits.
 
 Calculated dashboard values include an information tooltip with their formula, included inputs, and rounding behavior where relevant. Tooltips open on hover, keyboard focus, or tap.
 

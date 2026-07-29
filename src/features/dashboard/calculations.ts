@@ -36,8 +36,10 @@ export function calculateCategorySpending(rows: DashboardCategoryRow[]): Dashboa
   const totals = new Map<string, DashboardCategorySpending>();
   for (const row of rows) {
     const key = row.categoryId ?? "uncategorized";
-    const existing = totals.get(key) ?? { categoryId: row.categoryId, categoryName: row.categoryName ?? "Uncategorized", spendingCents: 0 };
+    const existing = totals.get(key) ?? { categoryId: row.categoryId, categoryName: row.categoryName ?? "Uncategorized", spendingCents: 0, monthlySpending: {} };
     existing.spendingCents -= row.amountCents;
+    const month = row.date.slice(0, 7);
+    existing.monthlySpending[month] = (existing.monthlySpending[month] ?? 0) - row.amountCents;
     totals.set(key, existing);
   }
   return [...totals.values()].filter((category) => category.spendingCents !== 0)

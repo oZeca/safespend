@@ -67,8 +67,9 @@ describe("dashboard repository", () => {
       expect(result.monthlyTrend[0]).toMatchObject({ month: "2026-01", incomeCents: 200000, expenseCents: 50000, savingsCents: 150000 });
       expect(result.monthlyTrend[6]).toMatchObject({ month: "2026-07", incomeCents: 150000, expenseCents: 50000, savingsCents: 100000 });
       expect(result.categorySpending).toEqual([
-        { categoryId: "category-groceries", categoryName: "Groceries", spendingCents: 30000 },
-        { categoryId: "category-shopping", categoryName: "Shopping", spendingCents: 20000 }
+        { categoryId: "category-housing", categoryName: "Housing", spendingCents: 50000, monthlySpending: { "2026-01": 50000 } },
+        { categoryId: "category-groceries", categoryName: "Groceries", spendingCents: 30000, monthlySpending: { "2026-07": 30000 } },
+        { categoryId: "category-shopping", categoryName: "Shopping", spendingCents: 20000, monthlySpending: { "2026-07": 20000 } }
       ]);
     } finally { database.close(); }
   });

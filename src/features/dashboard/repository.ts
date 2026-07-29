@@ -18,15 +18,15 @@ export function createDashboardRepository(database: Database.Database) {
       const transactionCount = database.prepare("SELECT COUNT(*) FROM transactions WHERE is_deleted = 0").pluck().get() as number;
       const transactions = database.prepare(`SELECT date, transaction_type AS transactionType, amount_cents AS amountCents
         FROM transactions WHERE is_deleted = 0 AND date >= ? AND date < ? ORDER BY date`).all(yearStart, `${nextMonth}-01`) as DashboardTransactionRow[];
-      const categoryRows = database.prepare(`SELECT t.category_id AS categoryId, c.name AS categoryName, t.amount_cents AS amountCents
+      const categoryRows = database.prepare(`SELECT t.date, t.category_id AS categoryId, c.name AS categoryName, t.amount_cents AS amountCents
         FROM transactions t LEFT JOIN categories c ON c.id = t.category_id
         WHERE t.is_deleted = 0 AND t.date >= ? AND t.date < ? AND t.transaction_type IN ('expense', 'refund')
           AND NOT EXISTS (SELECT 1 FROM transaction_splits s WHERE s.transaction_id = t.id)
         UNION ALL
-        SELECT s.category_id AS categoryId, c.name AS categoryName, s.amount_cents AS amountCents
+        SELECT t.date, s.category_id AS categoryId, c.name AS categoryName, s.amount_cents AS amountCents
         FROM transaction_splits s JOIN transactions t ON t.id = s.transaction_id JOIN categories c ON c.id = s.category_id
         WHERE t.is_deleted = 0 AND t.date >= ? AND t.date < ? AND t.transaction_type IN ('expense', 'refund')`)
-        .all(`${currentMonth}-01`, `${nextMonth}-01`, `${currentMonth}-01`, `${nextMonth}-01`) as DashboardCategoryRow[];
+        .all(yearStart, `${nextMonth}-01`, yearStart, `${nextMonth}-01`) as DashboardCategoryRow[];
       const actuals = calculateDashboardActuals(transactions, asOf);
       const categorySpending = calculateCategorySpending(categoryRows);
       return {
@@ -35,7 +35,7 @@ export function createDashboardRepository(database: Database.Database) {
         ...accountSummary,
         transactionCount,
         categorySpending,
-        uncategorizedSpendingCents: categorySpending.find((category) => category.categoryId === null)?.spendingCents ?? 0
+        uncategorizedSpendingCents: categorySpending.find((category) => category.categoryId === null)?.monthlySpending[currentMonth] ?? 0
       };
     }
   };

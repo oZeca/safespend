@@ -5,6 +5,7 @@ export interface DashboardTransactionRow {
 }
 
 export interface DashboardCategoryRow {
+  date: string;
   categoryId: string | null;
   categoryName: string | null;
   amountCents: number;
@@ -22,6 +23,7 @@ export interface DashboardCategorySpending {
   categoryId: string | null;
   categoryName: string;
   spendingCents: number;
+  monthlySpending: Record<string, number>;
 }
 
 export interface DashboardData {
