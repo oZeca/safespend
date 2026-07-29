@@ -2,6 +2,7 @@ import type { TransactionType } from "@/features/transactions/model";
 
 export const matchFields = ["description", "normalized_description", "merchant"] as const;
 export const matchTypes = ["contains", "starts_with", "exact", "regex"] as const;
+export const categorizationRulePatternMaxLength = 2_000;
 export type MatchField = (typeof matchFields)[number];
 export type MatchType = (typeof matchTypes)[number];
 

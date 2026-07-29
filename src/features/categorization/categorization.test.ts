@@ -7,7 +7,7 @@ import { runMigrations } from "@/db/migrate";
 import { createAccountRepository } from "@/features/accounts/repository";
 import { createTransactionRepository } from "@/features/transactions/repository";
 import { findMatchingRule, ruleMatches } from "./engine";
-import type { CategorizationRule, RuleWrite } from "./model";
+import { categorizationRulePatternMaxLength, type CategorizationRule, type RuleWrite } from "./model";
 import { createCategorizationRepository } from "./repository";
 import { ruleInputSchema } from "./validation";
 
@@ -28,6 +28,10 @@ describe("categorization engine", () => {
   });
   it("uses first enabled rule order", () => { expect(findMatchingRule([{ ...base, isEnabled: false }, { ...base, id: "second" }], transaction)?.id).toBe("second"); });
   it("rejects invalid regex patterns", () => { expect(ruleInputSchema.safeParse({ ...write, matchType: "regex", pattern: "[" }).success).toBe(false); });
+  it("accepts long patterns up to the documented limit", () => {
+    expect(ruleInputSchema.safeParse({ ...write, matchType: "regex", pattern: "a".repeat(categorizationRulePatternMaxLength) }).success).toBe(true);
+    expect(ruleInputSchema.safeParse({ ...write, matchType: "regex", pattern: "a".repeat(categorizationRulePatternMaxLength + 1) }).success).toBe(false);
+  });
 });
 
 describe("categorization repository", () => {

@@ -123,6 +123,7 @@ updated_at
 
 Fields: `description`, `normalized_description`, `merchant`.
 Match types: `contains`, `starts_with`, `exact`, `regex`.
+Patterns may contain up to 2,000 characters.
 
 ### imports
 
