@@ -12,6 +12,7 @@ test("uploads, maps, previews, and confirms a CSV import", async ({ page }) => {
   await page.getByRole("combobox", { name: "Date format" }).selectOption("DD/MM/YYYY"); await page.getByRole("combobox", { name: "Number format" }).selectOption("decimal_comma");
   await page.getByRole("button", { name: "Preview import" }).click();
   await expect(page.getByRole("heading", { name: "Preview CSV import" })).toBeVisible(); await expect(page.getByText("Invalid date")).toBeVisible(); await expect(page.getByRole("button", { name: "Confirm 2 transactions" })).toBeVisible();
-  await page.getByRole("button", { name: "Confirm 2 transactions" }).click();
-  await expect(page.getByRole("heading", { name: "Import result" })).toBeVisible(); await expect(page.getByText(/2 imported, 0 duplicates skipped, 1 invalid/)).toBeVisible();
+  await page.getByRole("checkbox", { name: "Import row 2" }).uncheck(); await expect(page.getByRole("button", { name: "Confirm 1 transaction" })).toBeVisible();
+  await page.getByRole("button", { name: "Confirm 1 transaction" }).click();
+  await expect(page.getByRole("heading", { name: "Import result" })).toBeVisible(); await expect(page.getByText(/1 imported, 0 duplicates skipped, 1 manually excluded, 1 invalid/)).toBeVisible();
 });

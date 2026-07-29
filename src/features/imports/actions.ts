@@ -43,7 +43,7 @@ export async function mapImportAction(importId: string, _state: ImportActionStat
 }
 
 export async function confirmImportAction(formData: FormData): Promise<void> {
-  const importId = String(formData.get("importId") ?? ""); let completed = false;
-  try { completed = Boolean(getImportRepository().confirm(importId)); } catch (error) { console.error("Failed to confirm import", error); }
+  const importId = String(formData.get("importId") ?? ""); const selectedRowIds = formData.getAll("selectedRowId").map(String); let completed = false;
+  try { completed = Boolean(getImportRepository().confirm(importId, selectedRowIds)); } catch (error) { console.error("Failed to confirm import", error); }
   revalidatePath("/imports"); revalidatePath("/transactions"); redirect(completed ? `/imports/${importId}/preview?status=completed` : "/imports?status=confirm-error");
 }

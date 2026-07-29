@@ -62,7 +62,7 @@ When individual credit-card purchases are imported as expenses, classify the ban
 
 The Imports page accepts UTF-8 CSV files up to 5 MB and 5,000 data rows. Comma, semicolon, and tab delimiters are detected automatically. The mapping step supports `YYYY-MM-DD`, `DD/MM/YYYY`, and `DD-MM-YYYY` dates plus decimal-comma and decimal-point amounts. Mappings may be saved as reusable profiles for files with matching headers.
 
-Preview flags invalid and exact-duplicate rows before confirmation. Confirmation is transactional, skips invalid/duplicate rows, preserves the complete original row JSON, and stores stable SHA-256 source fingerprints. Re-importing the same mapped rows does not create duplicate transactions. Positive amounts default to income and negative amounts to expenses; a matching categorization rule may override the category and type.
+Preview flags invalid and exact-duplicate rows before confirmation. Duplicate matching uses account, normalized date, integer-cent amount, and normalized description, with occurrence counts preserving legitimate repeated identical transactions even when CSV row positions change. Ready rows are selected by default and can be individually excluded before confirmation. Confirmation is transactional, skips invalid/duplicate/excluded rows, preserves the complete original row JSON, and stores stable SHA-256 source fingerprints. Positive amounts default to income and negative amounts to expenses; a matching categorization rule may override the category and type.
 
 ## Categorization rules
 

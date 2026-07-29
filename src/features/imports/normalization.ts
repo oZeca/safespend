@@ -28,15 +28,19 @@ export function parseLocalizedDate(value: string, format: DateFormat): string | 
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
-export function fingerprintRow(accountId: string, rowNumber: number, date: string, amountCents: number, description: string): string {
-  return createHash("sha256").update(`${accountId}|${date}|${amountCents}|${normalizeDescription(description)}|${rowNumber}`).digest("hex");
+export function duplicateKey(accountId: string, date: string, amountCents: number, description: string): string {
+  return `${accountId}|${date}|${amountCents}|${normalizeDescription(description)}`;
 }
 
-export function normalizeImportRow(original: Record<string, string>, mapping: CsvMapping, accountId: string, rowNumber: number): NormalizedImportRow {
+export function fingerprintRow(accountId: string, date: string, amountCents: number, description: string, occurrence: number): string {
+  return createHash("sha256").update(`${duplicateKey(accountId, date, amountCents, description)}|${occurrence}`).digest("hex");
+}
+
+export function normalizeImportRow(original: Record<string, string>, mapping: CsvMapping): NormalizedImportRow {
   const date = parseLocalizedDate(original[mapping.dateColumn] ?? "", mapping.dateFormat); const description = (original[mapping.descriptionColumn] ?? "").trim();
   const amountCents = parseLocalizedMoney(original[mapping.amountColumn] ?? "", mapping.decimalFormat); const errors: string[] = [];
   if (!date) errors.push("Invalid date"); if (!description) errors.push("Description is required"); if (description.length > 250) errors.push("Description exceeds 250 characters");
   if (amountCents === null || amountCents === 0) errors.push("Invalid or zero amount");
   const merchantValue = mapping.merchantColumn ? (original[mapping.merchantColumn] ?? "").trim() : ""; if (merchantValue.length > 150) errors.push("Merchant exceeds 150 characters");
-  return { date, description: description || null, merchant: merchantValue || null, amountCents, fingerprint: errors.length || !date || amountCents === null || !description ? null : fingerprintRow(accountId, rowNumber, date, amountCents, description), error: errors.length ? errors.join("; ") : null };
+  return { date, description: description || null, merchant: merchantValue || null, amountCents, fingerprint: null, error: errors.length ? errors.join("; ") : null };
 }

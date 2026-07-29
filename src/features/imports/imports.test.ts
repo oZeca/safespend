@@ -90,4 +90,29 @@ describe("CSV import repository", () => {
       expect((database.prepare("SELECT COUNT(*) AS count FROM transactions").get() as { count: number }).count).toBe(2);
     } finally { database.close(); }
   });
+  it("detects old transactions after CSV rows move and imports only new occurrences", () => {
+    const { database, account, repository } = setup();
+    try {
+      const oldCsv = parseCsv("Date;Description;Amount;Merchant\n21/07/2026;Coffee;-3,50;Cafe\n22/07/2026;Salary;2000,00;Employer\n");
+      const first = repository.stage("old.csv", "old-sha", account.id, oldCsv); repository.prepare(first, mapping); repository.confirm(first);
+      const mixedCsv = parseCsv("Date;Description;Amount;Merchant\n20/07/2026;Rent;-900,00;Landlord\n21/07/2026;Coffee;-3,50;Cafe\n22/07/2026;Salary;2000,00;Employer\n23/07/2026;Groceries;-40,00;Market\n");
+      const second = repository.stage("mixed.csv", "mixed-sha", account.id, mixedCsv); const preview = repository.prepare(second, mapping)!;
+      expect(preview.rows.map((row) => row.isExactDuplicate)).toEqual([false, true, true, false]);
+      const result = repository.confirm(second)!; expect(result).toMatchObject({ importedCount: 2, skippedCount: 2 });
+      expect((database.prepare("SELECT COUNT(*) AS count FROM transactions").get() as { count: number }).count).toBe(4);
+    } finally { database.close(); }
+  });
+  it("uses occurrence counts and honors manually excluded preview rows", () => {
+    const { database, account, repository } = setup();
+    try {
+      const oneCoffee = parseCsv("Date;Description;Amount;Merchant\n21/07/2026;Coffee;-3,50;Cafe\n");
+      const first = repository.stage("one.csv", "one-sha", account.id, oneCoffee); repository.prepare(first, mapping); repository.confirm(first);
+      const repeated = parseCsv("Date;Description;Amount;Merchant\n21/07/2026;Coffee;-3,50;Cafe\n21/07/2026;Coffee;-3,50;Cafe\n22/07/2026;Lunch;-12,00;Cafe\n");
+      const second = repository.stage("repeated.csv", "repeated-sha", account.id, repeated); const preview = repository.prepare(second, mapping)!;
+      expect(preview.rows.map((row) => row.isExactDuplicate)).toEqual([true, false, false]);
+      const selectedCoffee = preview.rows[1].id; const result = repository.confirm(second, [selectedCoffee])!;
+      expect(result).toMatchObject({ importedCount: 1, skippedCount: 1, excludedCount: 1 });
+      expect((database.prepare("SELECT COUNT(*) AS count FROM transactions").get() as { count: number }).count).toBe(2);
+    } finally { database.close(); }
+  });
 });

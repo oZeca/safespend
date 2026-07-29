@@ -273,13 +273,15 @@ recurring_items(next_expected_date)
 
 ## Duplicate detection
 
-Use a stable SHA-256 fingerprint based on normalized source values, for example:
+Use a stable SHA-256 fingerprint based on normalized source values and the occurrence number of otherwise identical rows:
 
 ```text
-account_id | date | amount_cents | normalized_description | source reference
+account_id | date | amount_cents | normalized_description | occurrence
 ```
 
 Prefer a bank-provided transaction identifier when available.
 
 - Exact duplicates: skip automatically
 - Probable duplicates: show for confirmation
+
+Compare occurrence counts against existing active transactions so adding or reordering CSV rows does not defeat exact matching, while multiple legitimate identical transactions remain importable. Preview selection is a fallback that allows any otherwise valid row to be excluded manually.
