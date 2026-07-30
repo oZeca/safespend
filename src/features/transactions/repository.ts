@@ -92,6 +92,14 @@ export function createTransactionRepository(database: Database.Database, options
           Number(input.excludedFromForecastBaseline ?? existing.excludedFromForecastBaseline), now().toISOString(), id);
       return result.changes ? this.findById(id) : null;
     },
+    updateCategory(id: string, categoryId: string | null): Transaction | null {
+      const existing = this.findById(id);
+      if (!existing) return null;
+      if (existing.splitCount > 0) throw new Error("Edit split categories instead.");
+      const result = database.prepare("UPDATE transactions SET category_id = ?, updated_at = ? WHERE id = ? AND is_deleted = 0")
+        .run(categoryId, now().toISOString(), id);
+      return result.changes ? this.findById(id) : null;
+    },
     softDelete(id: string): boolean {
       return database.transaction(() => {
         database.prepare("DELETE FROM transfer_links WHERE source_transaction_id = ? OR destination_transaction_id = ?").run(id, id);

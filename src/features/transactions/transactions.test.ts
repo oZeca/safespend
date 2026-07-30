@@ -28,6 +28,8 @@ describe("transaction repository", () => {
       expect(repository.list({ search: "fresh", page: 1, pageSize: 20 }).totalCount).toBe(1);
       expect(repository.list({ transactionType: "income", page: 1, pageSize: 20 }).totalCount).toBe(0);
       expect(repository.update(created.id, { ...base(account.id), description: "Super Market", notes: null })).toMatchObject({ description: "Super Market", notes: null });
+      expect(repository.updateCategory(created.id, "category-shopping")).toMatchObject({ categoryId: "category-shopping", categoryName: "Shopping" });
+      expect(repository.updateCategory(created.id, null)).toMatchObject({ categoryId: null, categoryName: null });
       expect(repository.softDelete(created.id)).toBe(true);
       expect(repository.softDelete(created.id)).toBe(false);
       expect(repository.findById(created.id)).toBeNull();

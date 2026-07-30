@@ -19,6 +19,10 @@ test("creates, edits, filters, and deletes a transaction", async ({ page }) => {
   await expect(page.getByText("Transaction created.")).toBeVisible();
   const row = page.getByRole("article").filter({ hasText: description });
   await expect(row.getByText("-€45.20")).toBeVisible();
+  const inlineCategory = row.getByRole("combobox", { name: `Category for ${description}` });
+  await inlineCategory.selectOption({ label: "Shopping" });
+  await expect(row.getByText("Saved")).toBeVisible();
+  await expect(inlineCategory).toHaveValue("category-shopping");
 
   await row.getByRole("link", { name: "Edit" }).click();
   await page.getByLabel("Description").fill(`${description} updated`);

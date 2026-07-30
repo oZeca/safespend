@@ -8,6 +8,7 @@ import { getTransactionRepository } from "./server-repository";
 import { transactionInputFromFormData, transactionInputSchema, type TransactionInput } from "./validation";
 
 export interface TransactionFormState { message?: string; errors?: Record<string, string[]>; values?: Record<string, string>; }
+export interface InlineCategoryState { saved?: boolean; error?: string; }
 
 function valuesFromFormData(formData: FormData): Record<string, string> {
   return Object.fromEntries(["accountId", "date", "description", "merchant", "amount", "transactionType", "categoryId", "notes", "isRecurring", "isExceptional", "excludedFromForecastBaseline"].map((key) => [key, String(formData.get(key) ?? "")]));
@@ -43,4 +44,27 @@ export async function deleteTransactionAction(formData: FormData): Promise<void>
   const id = formData.get("id"); let deleted = false;
   if (typeof id === "string" && id) { try { deleted = getTransactionRepository().softDelete(id); } catch (error) { console.error("Failed to delete transaction", error); } }
   revalidatePath("/transactions"); redirect(`/transactions?status=${deleted ? "deleted" : "delete-error"}`);
+}
+
+export async function updateTransactionCategoryAction(id: string, formData: FormData): Promise<InlineCategoryState> {
+  const categoryValue = formData.get("categoryId");
+  if (typeof categoryValue !== "string") return { error: "Invalid category." };
+  const categoryId = categoryValue.trim() || null;
+  const repository = getTransactionRepository();
+  const transaction = repository.findById(id);
+  if (!transaction) return { error: "Transaction not found." };
+  if (transaction.splitCount > 0) return { error: "Edit split categories instead." };
+  if (categoryId && !repository.listOptions(transaction.accountId).categories.some((category) => category.id === categoryId)) {
+    return { error: "Category unavailable." };
+  }
+  try {
+    if (!repository.updateCategory(id, categoryId)) return { error: "Transaction not found." };
+  } catch (error) {
+    console.error("Failed to update transaction category", error);
+    return { error: error instanceof Error ? error.message : "Could not save category." };
+  }
+  revalidatePath("/transactions");
+  revalidatePath(`/transactions/${id}/edit`);
+  revalidatePath("/dashboard");
+  return { saved: true };
 }
