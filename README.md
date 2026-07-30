@@ -99,7 +99,7 @@ Negative results remain visible. Weekly and daily figures never go below zero an
 
 Savings credited combines the configured starting amount with actual income minus expenses from the goal start through the local “as of” date. Transfers are excluded, except that positive transfers entering investment accounts are credited when the goal opts in. The target-date expected scenario also includes future income, recurring items, planned expenses, and a variable-spending projection based on the prior three complete calendar months. The baseline excludes recurring, exceptional, explicitly forecast-excluded, deleted, and transfer transactions.
 
-The dashboard exposes target progress, on-track status, upcoming recurring expenses, and the complete safe-to-spend derivation. Forecasts are planning estimates rather than guarantees; assumptions already represented by transactions should be removed to avoid counting them twice.
+The dashboard exposes target progress, on-track status, upcoming recurring expenses, and the complete safe-to-spend derivation. The target-date card also shows savings before variable spending, calculated by adding projected variable expenses back to the expected forecast as an explanatory upper bound. Forecasts are planning estimates rather than guarantees; assumptions already represented by transactions should be removed to avoid counting them twice.
 
 ## Backup, restore, and export
 

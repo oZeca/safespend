@@ -83,4 +83,5 @@ test("configures forecast assumptions and shows explained safe-to-spend", async 
   await expect(page.getByText("How safe-to-spend was calculated")).toBeVisible();
   await expect(page.getByText(updatedRecurringName)).toBeVisible();
   await expect(page.getByText("Forecasted target-date savings")).toBeVisible();
+  await expect(page.getByText("Savings before variable spending")).toBeVisible();
 });
