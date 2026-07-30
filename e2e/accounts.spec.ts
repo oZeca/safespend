@@ -10,7 +10,12 @@ test("creates, edits, and archives an account", async ({ page }) => {
   await page.getByRole("button", { name: "Create account" }).click();
   await expect(page.getByText("Account created.")).toBeVisible();
   const card = page.getByRole("article").filter({ hasText: name });
-  await expect(card.getByText("€1,234.56")).toBeVisible();
+  const inlineBalance = card.getByRole("textbox", { name: `Current balance for ${name}` });
+  await expect(inlineBalance).toHaveValue("1234.56");
+  await inlineBalance.fill("1400.00");
+  await inlineBalance.press("Enter");
+  await expect(card.getByText("Saved")).toBeVisible();
+  await expect(inlineBalance).toHaveValue("1400.00");
 
   await card.getByRole("link", { name: "Edit" }).click();
   await page.getByLabel("Account name").fill(`${name} updated`);

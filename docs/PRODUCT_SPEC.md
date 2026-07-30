@@ -65,6 +65,7 @@ Safe to spend is the main visual priority.
 - Create and edit current, savings, cash, credit, and investment accounts
 - Mark inclusion in available cash and net worth
 - Store current balance
+- Update current balances directly from the accounts list
 - View account history
 - Record balance snapshots
 

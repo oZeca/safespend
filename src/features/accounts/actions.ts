@@ -6,6 +6,7 @@ import { getAccountRepository } from "./server-repository";
 import { accountInputFromFormData, accountInputSchema, parseMoneyToCents } from "./validation";
 
 export interface AccountFormState { message?: string; errors?: Record<string, string[]>; values?: Record<string, string | boolean>; }
+export interface InlineBalanceState { saved?: boolean; error?: string; }
 
 function valuesFromFormData(formData: FormData): Record<string, string | boolean> {
   return {
@@ -46,4 +47,24 @@ export async function archiveAccountAction(formData: FormData): Promise<void> {
   try { if (!getAccountRepository().archive(id)) redirect("/accounts?status=archive-error"); }
   catch (error) { console.error("Failed to archive account", error); redirect("/accounts?status=archive-error"); }
   revalidatePath("/accounts"); redirect("/accounts?status=archived");
+}
+
+export async function updateAccountBalanceAction(id: string, formData: FormData): Promise<InlineBalanceState> {
+  const value = formData.get("currentBalance");
+  if (typeof value !== "string") return { error: "Enter a valid balance." };
+  const balanceCents = parseMoneyToCents(value);
+  if (balanceCents === null) return { error: "Use at most 2 decimal places." };
+  const repository = getAccountRepository();
+  const account = repository.findById(id);
+  if (!account || account.isArchived) return { error: "Account unavailable." };
+  try {
+    if (!repository.updateBalance(id, balanceCents)) return { error: "Account unavailable." };
+  } catch (error) {
+    console.error("Failed to update account balance", error);
+    return { error: "Could not save balance." };
+  }
+  revalidatePath("/accounts");
+  revalidatePath(`/accounts/${id}/edit`);
+  revalidatePath("/dashboard");
+  return { saved: true };
 }

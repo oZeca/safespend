@@ -1,8 +1,9 @@
 import { Plus } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { archiveAccountAction } from "@/features/accounts/actions";
+import { archiveAccountAction, updateAccountBalanceAction } from "@/features/accounts/actions";
 import { ArchiveButton } from "@/features/accounts/archive-button";
+import { InlineBalanceInput } from "@/features/accounts/inline-balance-input";
 import { formatCurrency } from "@/features/accounts/money";
 import { accountTypeLabels, type Account } from "@/features/accounts/model";
 import { getAccountRepository } from "@/features/accounts/server-repository";
@@ -19,7 +20,7 @@ function AccountCard({ account }: { account: Account }) {
         <p className="mt-1 text-sm text-muted-foreground">{accountTypeLabels[account.accountType]}{account.institution ? ` · ${account.institution}` : ""}</p>
         <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">{account.includedInAvailableCash && <span>Available cash</span>}{account.includedInNetWorth && <span>Net worth</span>}</div>
       </div>
-      <div className="flex items-center justify-between gap-4 sm:justify-end"><p className="text-xl font-semibold tabular-nums">{formatCurrency(account.currentBalanceCents, account.currency)}</p>
+      <div className="flex items-center justify-between gap-4 sm:justify-end">{account.isArchived ? <p className="text-xl font-semibold tabular-nums">{formatCurrency(account.currentBalanceCents, account.currency)}</p> : <InlineBalanceInput accountName={account.name} action={updateAccountBalanceAction.bind(null, account.id)} balanceCents={account.currentBalanceCents} currency={account.currency} />}
         {!account.isArchived && <div className="flex gap-2"><Button asChild size="sm" variant="outline"><Link href={`/accounts/${account.id}/edit`}>Edit</Link></Button><form action={archiveAccountAction}><input name="id" type="hidden" value={account.id} /><ArchiveButton accountName={account.name} /></form></div>}
       </div>
     </article>

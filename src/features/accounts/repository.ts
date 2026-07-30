@@ -64,6 +64,17 @@ export function createAccountRepository(database: Database.Database, options: Ac
       })();
       return this.findById(id);
     },
+    updateBalance(id: string, balanceCents: number): Account | null {
+      const existing = this.findById(id);
+      if (!existing || existing.isArchived) return null;
+      if (existing.currentBalanceCents === balanceCents) return existing;
+      const date = now(); const timestamp = date.toISOString();
+      database.transaction(() => {
+        database.prepare("UPDATE accounts SET current_balance_cents = ?, updated_at = ? WHERE id = ? AND is_archived = 0").run(balanceCents, timestamp, id);
+        recordSnapshot(id, balanceCents, date, timestamp);
+      })();
+      return this.findById(id);
+    },
     archive(id: string): boolean {
       return database.prepare("UPDATE accounts SET is_archived = 1, updated_at = ? WHERE id = ? AND is_archived = 0").run(now().toISOString(), id).changes === 1;
     }

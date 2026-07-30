@@ -32,7 +32,10 @@ describe("account repository", () => {
       expect(repository.listBalanceSnapshots(created.id)).toHaveLength(1);
       repository.update(created.id, { ...write, name: "Main account", currentBalanceCents: 125000 });
       expect(repository.listBalanceSnapshots(created.id).map((item) => item.balanceCents)).toEqual([123456, 125000]);
+      expect(repository.updateBalance(created.id, 130000)).toMatchObject({ currentBalanceCents: 130000 });
+      expect(repository.listBalanceSnapshots(created.id).map((item) => item.balanceCents)).toEqual([123456, 125000, 130000]);
       expect(repository.archive(created.id)).toBe(true);
+      expect(repository.updateBalance(created.id, 140000)).toBeNull();
       expect(repository.archive(created.id)).toBe(false);
       expect(repository.findById(created.id)).toMatchObject({ name: "Main account", isArchived: true });
     } finally { database.close(); }
