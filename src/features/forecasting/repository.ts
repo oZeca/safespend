@@ -44,11 +44,19 @@ export function createForecastRepository(database: Database.Database, options: F
     return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : 0;
   }
 
+  function getIncludeProjectedVariableExpenses(): boolean {
+    const raw = database.prepare("SELECT value_json FROM settings WHERE key = 'include_projected_variable_expenses'").pluck().get() as string | undefined;
+    if (!raw) return true;
+    const value: unknown = JSON.parse(raw);
+    return typeof value === "boolean" ? value : true;
+  }
+
   return {
     getConfiguration(): ForecastConfiguration {
       return {
         goal: getGoal(),
         minimumCashBufferCents: getMinimumBuffer(),
+        includeProjectedVariableExpenses: getIncludeProjectedVariableExpenses(),
         incomeExpectations: database.prepare(`SELECT id, name, expected_date AS expectedDate, amount_cents AS amountCents FROM income_expectations
           WHERE scenario = 'expected' ORDER BY expected_date, name COLLATE NOCASE`).all() as IncomeExpectation[],
         plannedExpenses: database.prepare(`SELECT id, name, expected_date AS expectedDate, amount_cents AS amountCents FROM planned_expenses
@@ -57,6 +65,12 @@ export function createForecastRepository(database: Database.Database, options: F
           frequency, next_expected_date AS nextExpectedDate, end_date AS endDate FROM recurring_items WHERE is_enabled = 1
           AND transaction_type IN ('income', 'expense') ORDER BY next_expected_date, name COLLATE NOCASE`).all() as RecurringItem[]
       };
+    },
+
+    setIncludeProjectedVariableExpenses(include: boolean): void {
+      database.prepare(`INSERT INTO settings (key, value_json, updated_at) VALUES ('include_projected_variable_expenses', ?, ?)
+        ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json, updated_at = excluded.updated_at`)
+        .run(JSON.stringify(include), now().toISOString());
     },
 
     saveGoal(input: GoalWrite): SavingsGoal {
@@ -177,6 +191,7 @@ export function createForecastRepository(database: Database.Database, options: F
         actualSavingsCents,
         investmentContributionsCents,
         historicalMonthlyBaselineCents,
+        includeProjectedVariableExpenses: configuration.includeProjectedVariableExpenses,
         incomeExpectations: configuration.incomeExpectations,
         plannedExpenses: configuration.plannedExpenses,
         recurringItems: configuration.recurringItems

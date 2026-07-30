@@ -32,6 +32,18 @@ export async function saveGoalAction(_state: ForecastFormState, formData: FormDa
   refresh(); redirect("/forecast?status=goal-saved");
 }
 
+export async function toggleProjectedVariableExpensesAction(formData: FormData): Promise<void> {
+  const include = formData.get("include") === "true";
+  const returnTo = formData.get("returnTo") === "/dashboard" ? "/dashboard" : "/forecast";
+  try {
+    getForecastRepository().setIncludeProjectedVariableExpenses(include);
+  } catch (error) {
+    console.error("Failed to update projected variable expense preference", error);
+    redirect(`${returnTo}?status=forecast-setting-error`);
+  }
+  refresh(); redirect(returnTo === "/forecast" ? "/forecast?status=forecast-setting-saved" : returnTo);
+}
+
 export async function createIncomeAction(_state: ForecastFormState, formData: FormData): Promise<ForecastFormState> {
   const values = formValues(formData, ["name", "expectedDate", "amount"]);
   const result = incomeInputSchema.safeParse(values);

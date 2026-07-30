@@ -23,7 +23,7 @@ const goal: SavingsGoal = {
 function engineInput(availableCashCents: number) {
   return {
     asOf: "2026-07-23", goal, minimumCashBufferCents: 100000, availableCashCents,
-    actualSavingsCents: 0, investmentContributionsCents: 0, historicalMonthlyBaselineCents: 0,
+    actualSavingsCents: 0, investmentContributionsCents: 0, historicalMonthlyBaselineCents: 0, includeProjectedVariableExpenses: true,
     incomeExpectations: [{ id: "income-1", name: "Bonus", expectedDate: "2026-07-25", amountCents: 100000 }],
     plannedExpenses: [{ id: "expense-1", name: "Repair", expectedDate: "2026-07-26", amountCents: 50000 }],
     recurringItems: [{ id: "recurring-1", name: "Rent", transactionType: "expense" as const, expectedAmountCents: -50000, frequency: "monthly" as const, nextExpectedDate: "2026-07-28", endDate: null }]
@@ -51,6 +51,14 @@ describe("forecast engine", () => {
       id: "month-end", name: "Month end", transactionType: "expense", expectedAmountCents: -1000,
       frequency: "monthly", nextExpectedDate: "2026-01-31", endDate: "2026-04-30"
     }], "2026-01-01", "2026-12-31").map((item) => item.date)).toEqual(["2026-01-31", "2026-02-28", "2026-03-31", "2026-04-30"]);
+  });
+
+  it("consistently applies or excludes projected variable expenses", () => {
+    const included = calculateForecast({ ...engineInput(500000), historicalMonthlyBaselineCents: 30000 });
+    const excluded = calculateForecast({ ...engineInput(500000), historicalMonthlyBaselineCents: 30000, includeProjectedVariableExpenses: false });
+    expect(included.appliedProjectedVariableExpensesCents).toBe(included.projectedVariableExpensesCents);
+    expect(excluded).toMatchObject({ includeProjectedVariableExpenses: false, appliedProjectedVariableExpensesCents: 0 });
+    expect(excluded.forecastedTargetSavingsCents).toBe(included.forecastedTargetSavingsCents + included.projectedVariableExpensesCents);
   });
 });
 
@@ -80,7 +88,10 @@ describe("forecast repository and validation", () => {
       const income = repository.createIncome({ name: "Bonus", expectedDate: "2026-08-01", amountCents: 50000 });
       const plannedExpense = repository.createPlannedExpense({ name: "Holiday", expectedDate: "2026-09-01", amountCents: 25000 });
       const recurring = repository.createRecurring({ name: "Rent", transactionType: "expense", expectedAmountCents: -50000, frequency: "monthly", nextExpectedDate: "2026-07-28", endDate: null });
-      expect(repository.getConfiguration()).toMatchObject({ minimumCashBufferCents: 150000, incomeExpectations: [{ name: "Bonus" }], plannedExpenses: [{ name: "Holiday" }], recurringItems: [{ name: "Rent" }] });
+      expect(repository.getConfiguration()).toMatchObject({ minimumCashBufferCents: 150000, includeProjectedVariableExpenses: true, incomeExpectations: [{ name: "Bonus" }], plannedExpenses: [{ name: "Holiday" }], recurringItems: [{ name: "Rent" }] });
+      repository.setIncludeProjectedVariableExpenses(false);
+      expect(repository.getConfiguration().includeProjectedVariableExpenses).toBe(false);
+      expect(repository.forecast("2026-07-23")).toMatchObject({ includeProjectedVariableExpenses: false, appliedProjectedVariableExpensesCents: 0 });
       expect(repository.updateRecurring(recurring.id, { name: "Salary", transactionType: "income", expectedAmountCents: 250000, frequency: "weekly", nextExpectedDate: "2026-08-01", endDate: "2026-10-01" })).toMatchObject({ name: "Salary", transactionType: "income", expectedAmountCents: 250000, frequency: "weekly", nextExpectedDate: "2026-08-01", endDate: "2026-10-01" });
       expect(repository.findRecurringById(recurring.id)).toMatchObject({ name: "Salary" });
       expect(repository.updateIncome(income.id, { name: "Updated bonus", expectedDate: "2026-08-02", amountCents: 75000 })).toMatchObject({ name: "Updated bonus", expectedDate: "2026-08-02", amountCents: 75000 });

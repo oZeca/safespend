@@ -8,6 +8,7 @@ interface ForecastEngineInput {
   actualSavingsCents: number;
   investmentContributionsCents: number;
   historicalMonthlyBaselineCents: number;
+  includeProjectedVariableExpenses: boolean;
   incomeExpectations: IncomeExpectation[];
   plannedExpenses: PlannedExpense[];
   recurringItems: RecurringItem[];
@@ -95,8 +96,9 @@ export function calculateForecast(input: ForecastEngineInput): ForecastResult {
   const expectedRemainingRecurringExpensesCents = sum(recurringExpenses.map((item) => Math.abs(item.amountCents)));
   const plannedRemainingExpensesCents = sum(futurePlanned.map((item) => item.amountCents));
   const projectedVariableExpensesCents = projectedBaseline(input.historicalMonthlyBaselineCents, input.asOf, input.goal.targetDate);
+  const appliedProjectedVariableExpensesCents = input.includeProjectedVariableExpenses ? projectedVariableExpensesCents : 0;
   const forecastedTargetSavingsCents = savingsCreditedCents + expectedRemainingIncomeCents + expectedRemainingRecurringIncomeCents
-    - expectedRemainingRecurringExpensesCents - plannedRemainingExpensesCents - projectedVariableExpensesCents;
+    - expectedRemainingRecurringExpensesCents - plannedRemainingExpensesCents - appliedProjectedVariableExpensesCents;
 
   const asOfDate = utcDate(input.asOf);
   const monthEnd = dateString(new Date(Date.UTC(asOfDate.getUTCFullYear(), asOfDate.getUTCMonth() + 1, 0)));
@@ -132,6 +134,8 @@ export function calculateForecast(input: ForecastEngineInput): ForecastResult {
     plannedRemainingExpensesCents,
     historicalMonthlyBaselineCents: input.historicalMonthlyBaselineCents,
     projectedVariableExpensesCents,
+    appliedProjectedVariableExpensesCents,
+    includeProjectedVariableExpenses: input.includeProjectedVariableExpenses,
     forecastedTargetSavingsCents,
     safeToSpendMonthCents,
     safeToSpendWeekCents,

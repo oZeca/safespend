@@ -72,6 +72,8 @@ export interface ForecastResult {
   plannedRemainingExpensesCents: number;
   historicalMonthlyBaselineCents: number;
   projectedVariableExpensesCents: number;
+  appliedProjectedVariableExpensesCents: number;
+  includeProjectedVariableExpenses: boolean;
   forecastedTargetSavingsCents: number;
   safeToSpendMonthCents: number;
   safeToSpendWeekCents: number;
@@ -89,6 +91,7 @@ export interface ForecastResult {
 export interface ForecastConfiguration {
   goal: SavingsGoal | null;
   minimumCashBufferCents: number;
+  includeProjectedVariableExpenses: boolean;
   incomeExpectations: IncomeExpectation[];
   plannedExpenses: PlannedExpense[];
   recurringItems: RecurringItem[];
