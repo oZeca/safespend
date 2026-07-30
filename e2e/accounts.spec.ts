@@ -29,3 +29,25 @@ test("creates, edits, and archives an account", async ({ page }) => {
   await page.getByText(/Archived accounts/).click();
   await expect(page.getByRole("article").filter({ hasText: `${name} updated` })).toBeVisible();
 });
+
+test("calculates an account balance from its opening balance and transactions", async ({ page }) => {
+  const unique = Date.now(); const name = `Calculated account ${unique}`;
+  await page.goto("/accounts/new");
+  await page.getByLabel("Account name").fill(name);
+  await page.getByLabel("Balance mode").selectOption("calculated");
+  await page.getByLabel("Opening balance", { exact: true }).fill("1000.00");
+  await page.getByLabel("Opening date").fill("2026-01-01");
+  await page.getByRole("button", { name: "Create account" }).click();
+
+  await page.goto("/transactions/new");
+  await page.getByRole("combobox", { name: "Account", exact: true }).selectOption({ label: name });
+  await page.getByLabel("Description").fill(`Calculated expense ${unique}`);
+  await page.getByLabel("Amount").fill("-100.00");
+  await page.getByRole("button", { name: "Create transaction" }).click();
+  await page.goto("/accounts");
+
+  const card = page.getByRole("article").filter({ hasText: name });
+  await expect(card.getByText("€900.00", { exact: true })).toBeVisible();
+  await expect(card.getByText(/€1,000.00 opening \+ -€100.00 transactions/)).toBeVisible();
+  await expect(card.getByRole("textbox", { name: `Current balance for ${name}` })).toHaveCount(0);
+});

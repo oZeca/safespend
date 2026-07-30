@@ -11,7 +11,8 @@ export interface InlineBalanceState { saved?: boolean; error?: string; }
 function valuesFromFormData(formData: FormData): Record<string, string | boolean> {
   return {
     name: String(formData.get("name") ?? ""), institution: String(formData.get("institution") ?? ""), accountType: String(formData.get("accountType") ?? "current"),
-    currency: String(formData.get("currency") ?? "EUR"), currentBalance: String(formData.get("currentBalance") ?? "0.00"),
+    currency: String(formData.get("currency") ?? "EUR"), currentBalance: String(formData.get("currentBalance") ?? "0.00"), balanceMode: String(formData.get("balanceMode") ?? "manual"),
+    openingBalance: String(formData.get("openingBalance") ?? "0.00"), openingBalanceDate: String(formData.get("openingBalanceDate") ?? ""),
     includedInAvailableCash: formData.get("includedInAvailableCash") === "on", includedInNetWorth: formData.get("includedInNetWorth") === "on"
   };
 }
@@ -22,8 +23,9 @@ function validate(formData: FormData): { success: false; state: AccountFormState
   return { success: true, data: toWrite(result.data) };
 }
 
-function toWrite(input: { name: string; institution: string; accountType: "current" | "savings" | "cash" | "credit" | "investment"; currency: "EUR"; currentBalance: string; includedInAvailableCash: boolean; includedInNetWorth: boolean }) {
-  return { name: input.name, institution: input.institution || null, accountType: input.accountType, currency: input.currency, currentBalanceCents: parseMoneyToCents(input.currentBalance)!, includedInAvailableCash: input.includedInAvailableCash, includedInNetWorth: input.includedInNetWorth };
+function toWrite(input: { name: string; institution: string; accountType: "current" | "savings" | "cash" | "credit" | "investment"; currency: "EUR"; currentBalance: string; balanceMode: "manual" | "calculated"; openingBalance: string; openingBalanceDate: string; includedInAvailableCash: boolean; includedInNetWorth: boolean }) {
+  return { name: input.name, institution: input.institution || null, accountType: input.accountType, currency: input.currency, currentBalanceCents: parseMoneyToCents(input.currentBalance)!, balanceMode: input.balanceMode,
+    openingBalanceCents: parseMoneyToCents(input.openingBalance)!, openingBalanceDate: input.openingBalanceDate, includedInAvailableCash: input.includedInAvailableCash, includedInNetWorth: input.includedInNetWorth };
 }
 
 export async function createAccountAction(_state: AccountFormState, formData: FormData): Promise<AccountFormState> {
@@ -57,6 +59,7 @@ export async function updateAccountBalanceAction(id: string, formData: FormData)
   const repository = getAccountRepository();
   const account = repository.findById(id);
   if (!account || account.isArchived) return { error: "Account unavailable." };
+  if (account.balanceMode !== "manual") return { error: "Calculated balances update from transactions." };
   try {
     if (!repository.updateBalance(id, balanceCents)) return { error: "Account unavailable." };
   } catch (error) {

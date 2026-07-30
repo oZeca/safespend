@@ -66,6 +66,7 @@ Safe to spend is the main visual priority.
 - Mark inclusion in available cash and net worth
 - Store current balance
 - Update current balances directly from the accounts list
+- Choose manual balances or calculate them from an opening balance plus subsequent transactions
 - View account history
 - Record balance snapshots
 

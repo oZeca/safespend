@@ -32,7 +32,7 @@ describe("backup and restore validation", () => {
       const destination = path.join(directory, "backup.db");
       await createDatabaseBackup(database, destination);
       expect(hasSqliteHeader(readFileSync(destination))).toBe(true);
-      expect(validateAndMigrateRestoreCandidate(destination)).toEqual({ migrationCount: 10 });
+      expect(validateAndMigrateRestoreCandidate(destination)).toEqual({ migrationCount: 11 });
       const restored = openDatabase(destination);
       try { expect(restored.prepare("SELECT name FROM accounts WHERE id = 'backup-account'").pluck().get()).toBe("Backup account"); }
       finally { restored.close(); }

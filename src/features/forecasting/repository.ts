@@ -1,4 +1,5 @@
 import type Database from "better-sqlite3";
+import { effectiveBalanceSql } from "@/features/accounts/balance";
 import { randomUUID } from "node:crypto";
 import { calculateForecast } from "./engine";
 import type { ForecastConfiguration, ForecastResult, GoalWrite, IncomeExpectation, PlannedExpense, RecurringItem, SavingsGoal } from "./model";
@@ -181,8 +182,8 @@ export function createForecastRepository(database: Database.Database, options: F
         WHERE is_deleted = 0 AND date >= ? AND date < ? AND transaction_type IN ('expense', 'refund')
           AND is_recurring = 0 AND is_exceptional = 0 AND excluded_from_forecast_baseline = 0`).pluck().get(baselineStart, currentMonthStart) as number;
       const historicalMonthlyBaselineCents = Number(BigInt(Math.max(0, -baselineNet)) / 3n);
-      const availableCashCents = database.prepare(`SELECT COALESCE(SUM(current_balance_cents), 0) FROM accounts
-        WHERE is_archived = 0 AND included_in_available_cash = 1`).pluck().get() as number;
+      const availableCashCents = database.prepare(`SELECT COALESCE(SUM(${effectiveBalanceSql}), 0) FROM accounts a
+        WHERE a.is_archived = 0 AND a.included_in_available_cash = 1`).pluck().get() as number;
       return calculateForecast({
         asOf,
         goal,

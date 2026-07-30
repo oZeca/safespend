@@ -1,5 +1,7 @@
 export const accountTypes = ["current", "savings", "cash", "credit", "investment"] as const;
 export type AccountType = (typeof accountTypes)[number];
+export const balanceModes = ["manual", "calculated"] as const;
+export type BalanceMode = (typeof balanceModes)[number];
 
 export interface Account {
   id: string;
@@ -8,6 +10,10 @@ export interface Account {
   accountType: AccountType;
   currency: string;
   currentBalanceCents: number;
+  manualBalanceCents: number;
+  balanceMode: BalanceMode;
+  openingBalanceCents: number;
+  openingBalanceDate: string;
   includedInAvailableCash: boolean;
   includedInNetWorth: boolean;
   isArchived: boolean;

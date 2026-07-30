@@ -9,6 +9,7 @@ import { formatCurrency } from "./money";
 import { createAccountRepository } from "./repository";
 import { calculateAccountSummary } from "./summary";
 import { accountInputSchema, formatMoneyInput, parseMoneyToCents } from "./validation";
+import { createTransactionRepository } from "@/features/transactions/repository";
 
 const directories: string[] = [];
 afterEach(() => { for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }); });
@@ -40,6 +41,21 @@ describe("account repository", () => {
       expect(repository.findById(created.id)).toMatchObject({ name: "Main account", isArchived: true });
     } finally { database.close(); }
   });
+
+  it("calculates balance from the opening balance and active transactions", () => {
+    const database = testDatabase();
+    const repository = createAccountRepository(database, { now: () => new Date("2026-07-22T10:00:00.000Z"), localDate: () => "2026-07-22" });
+    try {
+      const account = repository.create({ ...write, currentBalanceCents: 999999, balanceMode: "calculated", openingBalanceCents: 100000, openingBalanceDate: "2026-07-01" });
+      const transactions = createTransactionRepository(database);
+      const transaction = transactions.create({ accountId: account.id, date: "2026-07-02", description: "Deposit", merchant: null, amountCents: 25000, transactionType: "income", categoryId: null, notes: null });
+      transactions.create({ accountId: account.id, date: "2026-06-30", description: "Before opening", merchant: null, amountCents: 500000, transactionType: "income", categoryId: null, notes: null });
+      expect(repository.findById(account.id)).toMatchObject({ balanceMode: "calculated", currentBalanceCents: 125000, manualBalanceCents: 999999 });
+      transactions.softDelete(transaction.id);
+      expect(repository.findById(account.id)?.currentBalanceCents).toBe(100000);
+      expect(repository.updateBalance(account.id, 200000)).toBeNull();
+    } finally { database.close(); }
+  });
 });
 
 describe("account validation and totals", () => {
@@ -57,7 +73,7 @@ describe("account validation and totals", () => {
   });
 
   it("aggregates only enabled balances from active accounts", () => {
-    const base = { id: "1", name: "Account", institution: null, accountType: "current" as const, currency: "EUR", currentBalanceCents: 10000, includedInAvailableCash: true, includedInNetWorth: true, isArchived: false, createdAt: "", updatedAt: "" };
+    const base = { id: "1", name: "Account", institution: null, accountType: "current" as const, currency: "EUR", currentBalanceCents: 10000, manualBalanceCents: 10000, balanceMode: "manual" as const, openingBalanceCents: 0, openingBalanceDate: "2026-01-01", includedInAvailableCash: true, includedInNetWorth: true, isArchived: false, createdAt: "", updatedAt: "" };
     const accounts: Account[] = [base, { ...base, id: "2", currentBalanceCents: -2500, includedInAvailableCash: false }, { ...base, id: "3", currentBalanceCents: 999999, isArchived: true }];
     expect(calculateAccountSummary(accounts)).toEqual({ availableCashCents: 10000, netWorthCents: 7500, activeAccountCount: 2 });
   });

@@ -29,6 +29,9 @@ institution
 account_type
 currency
 current_balance_cents
+balance_mode
+opening_balance_cents
+opening_balance_date
 included_in_available_cash
 included_in_net_worth
 is_archived
@@ -37,6 +40,8 @@ updated_at
 ```
 
 Types: `current`, `savings`, `cash`, `credit`, `investment`.
+
+Balance modes: `manual`, `calculated`. Calculated balances equal the opening balance plus signed, active transactions dated on or after the opening date.
 
 ### categories
 

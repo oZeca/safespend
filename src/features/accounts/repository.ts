@@ -1,23 +1,29 @@
 import type Database from "better-sqlite3";
 import { randomUUID } from "node:crypto";
-import type { Account, AccountType, BalanceSnapshot } from "./model";
+import type { Account, AccountType, BalanceMode, BalanceSnapshot } from "./model";
+import { effectiveBalanceSql } from "./balance";
 
 interface AccountRow {
-  id: string; name: string; institution: string | null; account_type: AccountType; currency: string; current_balance_cents: number;
+  id: string; name: string; institution: string | null; account_type: AccountType; currency: string; current_balance_cents: number; manual_balance_cents: number;
+  balance_mode: BalanceMode; opening_balance_cents: number; opening_balance_date: string;
   included_in_available_cash: number; included_in_net_worth: number; is_archived: number; created_at: string; updated_at: string;
 }
 
 export interface AccountWrite {
   name: string; institution: string | null; accountType: AccountType; currency: string; currentBalanceCents: number;
+  balanceMode?: BalanceMode; openingBalanceCents?: number; openingBalanceDate?: string;
   includedInAvailableCash: boolean; includedInNetWorth: boolean;
 }
 
 export interface AccountRepositoryOptions { now?: () => Date; id?: () => string; localDate?: (date: Date) => string; }
 
-const selectAccounts = `SELECT id, name, institution, account_type, currency, current_balance_cents, included_in_available_cash, included_in_net_worth, is_archived, created_at, updated_at FROM accounts`;
+const selectAccounts = `SELECT a.id, a.name, a.institution, a.account_type, a.currency, ${effectiveBalanceSql} AS current_balance_cents,
+  a.current_balance_cents AS manual_balance_cents, a.balance_mode, a.opening_balance_cents, a.opening_balance_date,
+  a.included_in_available_cash, a.included_in_net_worth, a.is_archived, a.created_at, a.updated_at FROM accounts a`;
 
 function mapAccount(row: AccountRow): Account {
   return { id: row.id, name: row.name, institution: row.institution, accountType: row.account_type, currency: row.currency, currentBalanceCents: row.current_balance_cents,
+    manualBalanceCents: row.manual_balance_cents, balanceMode: row.balance_mode, openingBalanceCents: row.opening_balance_cents, openingBalanceDate: row.opening_balance_date,
     includedInAvailableCash: Boolean(row.included_in_available_cash), includedInNetWorth: Boolean(row.included_in_net_worth), isArchived: Boolean(row.is_archived), createdAt: row.created_at, updatedAt: row.updated_at };
 }
 
@@ -48,9 +54,9 @@ export function createAccountRepository(database: Database.Database, options: Ac
     create(input: AccountWrite): Account {
       const id = makeId(); const date = now(); const timestamp = date.toISOString();
       database.transaction(() => {
-        database.prepare("INSERT INTO accounts (id, name, institution, account_type, currency, current_balance_cents, included_in_available_cash, included_in_net_worth, is_archived, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)")
-          .run(id, input.name, input.institution, input.accountType, input.currency, input.currentBalanceCents, Number(input.includedInAvailableCash), Number(input.includedInNetWorth), timestamp, timestamp);
-        recordSnapshot(id, input.currentBalanceCents, date, timestamp);
+        database.prepare("INSERT INTO accounts (id, name, institution, account_type, currency, current_balance_cents, balance_mode, opening_balance_cents, opening_balance_date, included_in_available_cash, included_in_net_worth, is_archived, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)")
+          .run(id, input.name, input.institution, input.accountType, input.currency, input.currentBalanceCents, input.balanceMode ?? "manual", input.openingBalanceCents ?? 0, input.openingBalanceDate ?? localDate(date), Number(input.includedInAvailableCash), Number(input.includedInNetWorth), timestamp, timestamp);
+        if ((input.balanceMode ?? "manual") === "manual") recordSnapshot(id, input.currentBalanceCents, date, timestamp);
       })();
       return this.findById(id)!;
     },
@@ -58,16 +64,16 @@ export function createAccountRepository(database: Database.Database, options: Ac
       const existing = this.findById(id); if (!existing) return null;
       const date = now(); const timestamp = date.toISOString();
       database.transaction(() => {
-        database.prepare("UPDATE accounts SET name = ?, institution = ?, account_type = ?, currency = ?, current_balance_cents = ?, included_in_available_cash = ?, included_in_net_worth = ?, updated_at = ? WHERE id = ?")
-          .run(input.name, input.institution, input.accountType, input.currency, input.currentBalanceCents, Number(input.includedInAvailableCash), Number(input.includedInNetWorth), timestamp, id);
-        if (existing.currentBalanceCents !== input.currentBalanceCents) recordSnapshot(id, input.currentBalanceCents, date, timestamp);
+        database.prepare("UPDATE accounts SET name = ?, institution = ?, account_type = ?, currency = ?, current_balance_cents = ?, balance_mode = ?, opening_balance_cents = ?, opening_balance_date = ?, included_in_available_cash = ?, included_in_net_worth = ?, updated_at = ? WHERE id = ?")
+          .run(input.name, input.institution, input.accountType, input.currency, input.currentBalanceCents, input.balanceMode ?? existing.balanceMode, input.openingBalanceCents ?? existing.openingBalanceCents, input.openingBalanceDate ?? existing.openingBalanceDate, Number(input.includedInAvailableCash), Number(input.includedInNetWorth), timestamp, id);
+        if ((input.balanceMode ?? existing.balanceMode) === "manual" && existing.manualBalanceCents !== input.currentBalanceCents) recordSnapshot(id, input.currentBalanceCents, date, timestamp);
       })();
       return this.findById(id);
     },
     updateBalance(id: string, balanceCents: number): Account | null {
       const existing = this.findById(id);
-      if (!existing || existing.isArchived) return null;
-      if (existing.currentBalanceCents === balanceCents) return existing;
+      if (!existing || existing.isArchived || existing.balanceMode !== "manual") return null;
+      if (existing.manualBalanceCents === balanceCents) return existing;
       const date = now(); const timestamp = date.toISOString();
       database.transaction(() => {
         database.prepare("UPDATE accounts SET current_balance_cents = ?, updated_at = ? WHERE id = ? AND is_archived = 0").run(balanceCents, timestamp, id);
