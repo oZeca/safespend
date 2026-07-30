@@ -7,23 +7,23 @@ import { normalizeDescription } from "./validation";
 interface TransactionRow {
   id: string; accountId: string; accountName: string; date: string; description: string; normalizedDescription: string; merchant: string | null;
   amountCents: number; transactionType: TransactionType; categoryId: string | null; categoryName: string | null; notes: string | null; splitCount: number;
-  isRecurring: number; isExceptional: number; excludedFromForecastBaseline: number; createdAt: string; updatedAt: string;
+  isRecurring: number; isExceptional: number; excludedFromForecastBaseline: number; excludedFromAccountBalance: number; createdAt: string; updatedAt: string;
 }
 export interface TransactionWrite {
   accountId: string; date: string; description: string; merchant: string | null; amountCents: number; transactionType: TransactionType; categoryId: string | null; notes: string | null;
-  isRecurring?: boolean; isExceptional?: boolean; excludedFromForecastBaseline?: boolean;
+  isRecurring?: boolean; isExceptional?: boolean; excludedFromForecastBaseline?: boolean; excludedFromAccountBalance?: boolean;
 }
 export interface TransactionRepositoryOptions { now?: () => Date; id?: () => string; }
 
 const select = `SELECT t.id, t.account_id AS accountId, a.name AS accountName, t.date, t.description, t.normalized_description AS normalizedDescription, t.merchant,
   t.amount_cents AS amountCents, t.transaction_type AS transactionType, t.category_id AS categoryId, c.name AS categoryName, t.notes,
   (SELECT COUNT(*) FROM transaction_splits ts WHERE ts.transaction_id = t.id) AS splitCount, t.is_recurring AS isRecurring, t.is_exceptional AS isExceptional,
-  t.excluded_from_forecast_baseline AS excludedFromForecastBaseline, t.created_at AS createdAt, t.updated_at AS updatedAt
+  t.excluded_from_forecast_baseline AS excludedFromForecastBaseline, t.excluded_from_account_balance AS excludedFromAccountBalance, t.created_at AS createdAt, t.updated_at AS updatedAt
   FROM transactions t JOIN accounts a ON a.id = t.account_id LEFT JOIN categories c ON c.id = t.category_id`;
 
 function escapeLike(value: string): string { return value.replace(/[\\%_]/g, "\\$&"); }
 function mapTransaction(row: TransactionRow): Transaction {
-  return { ...row, isRecurring: Boolean(row.isRecurring), isExceptional: Boolean(row.isExceptional), excludedFromForecastBaseline: Boolean(row.excludedFromForecastBaseline) };
+  return { ...row, isRecurring: Boolean(row.isRecurring), isExceptional: Boolean(row.isExceptional), excludedFromForecastBaseline: Boolean(row.excludedFromForecastBaseline), excludedFromAccountBalance: Boolean(row.excludedFromAccountBalance) };
 }
 
 export function createTransactionRepository(database: Database.Database, options: TransactionRepositoryOptions = {}) {
@@ -60,7 +60,8 @@ export function createTransactionRepository(database: Database.Database, options
       const totalCount = (database.prepare(`SELECT COUNT(*) AS count FROM transactions t ${clause}`).get(parameters) as { count: number }).count;
       const totalPages = Math.max(1, Math.ceil(totalCount / filters.pageSize)); const page = Math.min(filters.page, totalPages);
       parameters.limit = filters.pageSize; parameters.offset = (page - 1) * filters.pageSize;
-      const items = (database.prepare(`${select} ${clause} ORDER BY t.date DESC, t.created_at DESC, t.id DESC LIMIT @limit OFFSET @offset`).all(parameters) as TransactionRow[]).map(mapTransaction);
+      const direction = filters.dateSort === "oldest" ? "ASC" : "DESC";
+      const items = (database.prepare(`${select} ${clause} ORDER BY t.date ${direction}, t.created_at ${direction}, t.id ${direction} LIMIT @limit OFFSET @offset`).all(parameters) as TransactionRow[]).map(mapTransaction);
       return { items, totalCount, page, pageSize: filters.pageSize, totalPages };
     },
     findById(id: string): Transaction | null {
@@ -70,9 +71,9 @@ export function createTransactionRepository(database: Database.Database, options
     create(input: TransactionWrite): Transaction {
       const id = makeId(); const timestamp = now().toISOString();
       database.prepare(`INSERT INTO transactions (id, account_id, date, posted_at, description, normalized_description, merchant, amount_cents, transaction_type, category_id, notes,
-        is_recurring, is_exceptional, excluded_from_forecast_baseline, is_deleted, created_at, updated_at) VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)`)
+        is_recurring, is_exceptional, excluded_from_forecast_baseline, excluded_from_account_balance, is_deleted, created_at, updated_at) VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)`)
         .run(id, input.accountId, input.date, input.description, normalizeDescription(input.description), input.merchant, input.amountCents, input.transactionType, input.categoryId, input.notes,
-          Number(input.isRecurring ?? false), Number(input.isExceptional ?? false), Number(input.excludedFromForecastBaseline ?? false), timestamp, timestamp);
+          Number(input.isRecurring ?? false), Number(input.isExceptional ?? false), Number(input.excludedFromForecastBaseline ?? false), Number(input.excludedFromAccountBalance ?? false), timestamp, timestamp);
       return this.findById(id)!;
     },
     update(id: string, input: TransactionWrite): Transaction | null {
@@ -86,10 +87,10 @@ export function createTransactionRepository(database: Database.Database, options
         throw new Error("Unlink this transfer before changing its account, amount, or type.");
       }
       const result = database.prepare(`UPDATE transactions SET account_id = ?, date = ?, description = ?, normalized_description = ?, merchant = ?, amount_cents = ?, transaction_type = ?, category_id = ?, notes = ?,
-        is_recurring = ?, is_exceptional = ?, excluded_from_forecast_baseline = ?, updated_at = ? WHERE id = ? AND is_deleted = 0`)
+        is_recurring = ?, is_exceptional = ?, excluded_from_forecast_baseline = ?, excluded_from_account_balance = ?, updated_at = ? WHERE id = ? AND is_deleted = 0`)
         .run(input.accountId, input.date, input.description, normalizeDescription(input.description), input.merchant, input.amountCents, input.transactionType, input.categoryId, input.notes,
           Number(input.isRecurring ?? existing.isRecurring), Number(input.isExceptional ?? existing.isExceptional),
-          Number(input.excludedFromForecastBaseline ?? existing.excludedFromForecastBaseline), now().toISOString(), id);
+          Number(input.excludedFromForecastBaseline ?? existing.excludedFromForecastBaseline), Number(input.excludedFromAccountBalance ?? existing.excludedFromAccountBalance), now().toISOString(), id);
       return result.changes ? this.findById(id) : null;
     },
     updateCategory(id: string, categoryId: string | null): Transaction | null {

@@ -49,10 +49,14 @@ describe("account repository", () => {
       const account = repository.create({ ...write, currentBalanceCents: 999999, balanceMode: "calculated", openingBalanceCents: 100000, openingBalanceDate: "2026-07-01" });
       const transactions = createTransactionRepository(database);
       const transaction = transactions.create({ accountId: account.id, date: "2026-07-02", description: "Deposit", merchant: null, amountCents: 25000, transactionType: "income", categoryId: null, notes: null });
+      const internalMovement = transactions.create({ accountId: account.id, date: "2026-07-03", description: "Internal fund movement", merchant: null, amountCents: -50000, transactionType: "transfer", categoryId: "category-transfers", notes: null, excludedFromAccountBalance: true });
       transactions.create({ accountId: account.id, date: "2026-06-30", description: "Before opening", merchant: null, amountCents: 500000, transactionType: "income", categoryId: null, notes: null });
       expect(repository.findById(account.id)).toMatchObject({ balanceMode: "calculated", currentBalanceCents: 125000, manualBalanceCents: 999999 });
+      expect(transactions.findById(internalMovement.id)).toMatchObject({ excludedFromAccountBalance: true, amountCents: -50000 });
+      transactions.update(internalMovement.id, { accountId: account.id, date: "2026-07-03", description: "Internal fund movement", merchant: null, amountCents: -50000, transactionType: "transfer", categoryId: "category-transfers", notes: null, excludedFromAccountBalance: false });
+      expect(repository.findById(account.id)?.currentBalanceCents).toBe(75000);
       transactions.softDelete(transaction.id);
-      expect(repository.findById(account.id)?.currentBalanceCents).toBe(100000);
+      expect(repository.findById(account.id)?.currentBalanceCents).toBe(50000);
       expect(repository.updateBalance(account.id, 200000)).toBeNull();
     } finally { database.close(); }
   });

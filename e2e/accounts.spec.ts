@@ -44,6 +44,14 @@ test("calculates an account balance from its opening balance and transactions", 
   await page.getByLabel("Description").fill(`Calculated expense ${unique}`);
   await page.getByLabel("Amount").fill("-100.00");
   await page.getByRole("button", { name: "Create transaction" }).click();
+
+  await page.goto("/transactions/new");
+  await page.getByRole("combobox", { name: "Account", exact: true }).selectOption({ label: name });
+  await page.getByLabel("Description").fill(`Internal fund movement ${unique}`);
+  await page.getByLabel("Amount").fill("-500.00");
+  await page.getByRole("combobox", { name: "Type", exact: true }).selectOption("transfer");
+  await page.getByLabel("Internal movement within this account").check();
+  await page.getByRole("button", { name: "Create transaction" }).click();
   await page.goto("/accounts");
 
   const card = page.getByRole("article").filter({ hasText: name });

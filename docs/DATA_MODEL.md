@@ -41,7 +41,7 @@ updated_at
 
 Types: `current`, `savings`, `cash`, `credit`, `investment`.
 
-Balance modes: `manual`, `calculated`. Calculated balances equal the opening balance plus signed, active transactions dated on or after the opening date.
+Balance modes: `manual`, `calculated`. Calculated balances equal the opening balance plus signed, active transactions dated on or after the opening date, excluding transactions explicitly marked as internal movements within a consolidated account.
 
 ### categories
 
@@ -74,6 +74,7 @@ notes
 is_recurring
 is_exceptional
 excluded_from_forecast_baseline
+excluded_from_account_balance
 source_import_id
 source_row_number
 source_fingerprint

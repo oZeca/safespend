@@ -32,6 +32,9 @@ export function TransactionForm({ action, accounts, categories, transaction, def
         <label className="flex items-start gap-3"><input className="mt-1 h-4 w-4 accent-emerald-700" defaultChecked={checked("isExceptional", transaction?.isExceptional ?? false)} name="isExceptional" type="checkbox" /><span><span className="block text-sm">Exceptional transaction</span><span className="text-xs text-muted-foreground">Keep it in actual totals but exclude it from the historical forecast baseline.</span></span></label>
         <label className="flex items-start gap-3"><input className="mt-1 h-4 w-4 accent-emerald-700" defaultChecked={checked("excludedFromForecastBaseline", transaction?.excludedFromForecastBaseline ?? false)} name="excludedFromForecastBaseline" type="checkbox" /><span><span className="block text-sm">Exclude from forecast baseline</span><span className="text-xs text-muted-foreground">Use for other unusual items that should not shape projected variable spending.</span></span></label>
       </fieldset>
+      <fieldset className="space-y-3 rounded-md border p-4 sm:col-span-2"><legend className="px-1 text-sm font-medium">Balance treatment</legend>
+        <label className="flex items-start gap-3"><input className="mt-1 h-4 w-4 accent-emerald-700" defaultChecked={checked("excludedFromAccountBalance", transaction?.excludedFromAccountBalance ?? false)} name="excludedFromAccountBalance" type="checkbox" /><span><span className="block text-sm">Internal movement within this account</span><span className="text-xs text-muted-foreground">Keep the transaction visible but exclude it from calculated account balances. Use when one account combines internal pockets or funds.</span></span></label>
+      </fieldset>
     </div><div className="flex justify-end"><SubmitButton edit={Boolean(transaction)} /></div>
   </form>;
 }

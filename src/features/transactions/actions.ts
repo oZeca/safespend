@@ -11,11 +11,11 @@ export interface TransactionFormState { message?: string; errors?: Record<string
 export interface InlineCategoryState { saved?: boolean; error?: string; }
 
 function valuesFromFormData(formData: FormData): Record<string, string> {
-  return Object.fromEntries(["accountId", "date", "description", "merchant", "amount", "transactionType", "categoryId", "notes", "isRecurring", "isExceptional", "excludedFromForecastBaseline"].map((key) => [key, String(formData.get(key) ?? "")]));
+  return Object.fromEntries(["accountId", "date", "description", "merchant", "amount", "transactionType", "categoryId", "notes", "isRecurring", "isExceptional", "excludedFromForecastBaseline", "excludedFromAccountBalance"].map((key) => [key, String(formData.get(key) ?? "")]));
 }
 function toWrite(input: TransactionInput): TransactionWrite {
   return { accountId: input.accountId, date: input.date, description: input.description, merchant: input.merchant || null, amountCents: parseMoneyToCents(input.amount)!, transactionType: input.transactionType, categoryId: input.categoryId || null, notes: input.notes || null,
-    isRecurring: input.isRecurring, isExceptional: input.isExceptional, excludedFromForecastBaseline: input.excludedFromForecastBaseline };
+    isRecurring: input.isRecurring, isExceptional: input.isExceptional, excludedFromForecastBaseline: input.excludedFromForecastBaseline, excludedFromAccountBalance: input.excludedFromAccountBalance };
 }
 function validate(formData: FormData, includeAccountId?: string): { success: false; state: TransactionFormState } | { success: true; data: TransactionWrite } {
   const result = transactionInputSchema.safeParse(transactionInputFromFormData(formData));

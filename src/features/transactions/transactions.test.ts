@@ -70,6 +70,19 @@ describe("transaction repository", () => {
       expect(repository.list({ amountComparison: "less", amountCents: -5000, page: 1, pageSize: 20 }).items.map((item) => item.description)).toEqual(["Large expense"]);
     } finally { database.close(); }
   });
+
+  it("sorts by transaction date in both directions and clamps pages", () => {
+    const { database, repository, account } = setup();
+    try {
+      repository.create({ ...base(account.id), date: "2026-07-20", description: "Middle" });
+      repository.create({ ...base(account.id), date: "2026-07-01", description: "Oldest" });
+      repository.create({ ...base(account.id), date: "2026-07-31", description: "Newest" });
+
+      expect(repository.list({ dateSort: "newest", page: 1, pageSize: 20 }).items.map((item) => item.description)).toEqual(["Newest", "Middle", "Oldest"]);
+      expect(repository.list({ dateSort: "oldest", page: 1, pageSize: 20 }).items.map((item) => item.description)).toEqual(["Oldest", "Middle", "Newest"]);
+      expect(repository.list({ dateSort: "oldest", page: 99, pageSize: 2 })).toMatchObject({ page: 2, totalPages: 2 });
+    } finally { database.close(); }
+  });
 });
 
 describe("transaction domain", () => {

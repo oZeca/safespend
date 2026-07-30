@@ -50,12 +50,14 @@ Safe to spend is the main visual priority.
 ### Transactions
 
 - Paginated list
+- First/last page shortcuts and date sorting from newest to oldest or oldest to newest
 - Search by description or merchant
 - Filter by date, account, category, type, and signed amount (equal to, more than, or less than)
 - Edit category and type
 - Change a transaction's category directly from the list, saving each selection immediately
 - Split across categories
 - Mark recurring or transfer
+- Mark internal movements between pockets or funds so they remain visible without changing a consolidated account balance
 - Add notes
 - Bulk categorize
 - Exclude exceptional transactions from forecast baselines without removing them from actual totals

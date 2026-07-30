@@ -15,9 +15,9 @@ describe("database foundation", () => {
     directories.push(directory);
     const database = openDatabase(path.join(directory, "test.db"));
     try {
-      expect(runMigrations(database).applied).toEqual(["0001_initial_schema.sql", "0002_accounts_indexes.sql", "0003_default_categories.sql", "0004_csv_import_staging.sql", "0005_categorization_rules.sql", "0006_transfers_and_splits.sql", "0007_forecast_indexes_and_defaults.sql", "0008_release_settings.sql", "0009_import_selection_and_duplicate_detection.sql", "0010_import_row_selection.sql", "0011_account_balance_modes.sql"]);
+      expect(runMigrations(database).applied).toEqual(["0001_initial_schema.sql", "0002_accounts_indexes.sql", "0003_default_categories.sql", "0004_csv_import_staging.sql", "0005_categorization_rules.sql", "0006_transfers_and_splits.sql", "0007_forecast_indexes_and_defaults.sql", "0008_release_settings.sql", "0009_import_selection_and_duplicate_detection.sql", "0010_import_row_selection.sql", "0011_account_balance_modes.sql", "0012_transaction_balance_exclusions.sql"]);
       expect(runMigrations(database).applied).toEqual([]);
-      expect(getDatabaseHealth(database)).toEqual({ ok: true, migrationCount: 11 });
+      expect(getDatabaseHealth(database)).toEqual({ ok: true, migrationCount: 12 });
       expect(database.pragma("journal_mode", { simple: true })).toBe("wal");
       expect(database.pragma("foreign_keys", { simple: true })).toBe(1);
       expect(database.pragma("synchronous", { simple: true })).toBe(1);

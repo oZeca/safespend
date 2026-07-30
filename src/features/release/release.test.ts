@@ -32,7 +32,7 @@ describe("backup and restore validation", () => {
       const destination = path.join(directory, "backup.db");
       await createDatabaseBackup(database, destination);
       expect(hasSqliteHeader(readFileSync(destination))).toBe(true);
-      expect(validateAndMigrateRestoreCandidate(destination)).toEqual({ migrationCount: 11 });
+      expect(validateAndMigrateRestoreCandidate(destination)).toEqual({ migrationCount: 12 });
       const restored = openDatabase(destination);
       try { expect(restored.prepare("SELECT name FROM accounts WHERE id = 'backup-account'").pluck().get()).toBe("Backup account"); }
       finally { restored.close(); }
@@ -65,7 +65,7 @@ describe("release exports and demo seed", () => {
       const current = accounts.create({ name: "Current, EUR", institution: null, accountType: "current", currency: "EUR", currentBalanceCents: 0, includedInAvailableCash: true, includedInNetWorth: true });
       let transactionId = 0;
       const transactions = createTransactionRepository(database, { id: () => `export-transaction-${++transactionId}`, now: () => new Date("2026-07-23T00:00:00.000Z") });
-      const transaction = transactions.create({ accountId: current.id, date: "2026-07-23", description: "Shop \"quoted\", line", merchant: "Merchant, Ltd", amountCents: -12345, transactionType: "expense", categoryId: "category-shopping", notes: "one\ntwo", isExceptional: true });
+      const transaction = transactions.create({ accountId: current.id, date: "2026-07-23", description: "Shop \"quoted\", line", merchant: "Merchant, Ltd", amountCents: -12345, transactionType: "expense", categoryId: "category-shopping", notes: "one\ntwo", isExceptional: true, excludedFromAccountBalance: true });
       let splitId = 0;
       createTransferRepository(database, { id: () => `export-split-${++splitId}`, now: () => new Date("2026-07-23T00:00:00.000Z") }).replaceSplits(transaction.id, [
         { categoryId: "category-shopping", amountCents: -10000, notes: "Main" },
@@ -76,7 +76,7 @@ describe("release exports and demo seed", () => {
       expect(csv).toContain('"Shop ""quoted"", line"');
       expect(csv).toContain("-123.45");
       expect(csv).toContain('""amount"":""-100.00""');
-      expect(csv).toContain(",0,1,0,");
+      expect(csv).toContain(",0,1,0,1,");
       expect(csv).toContain('"one\ntwo"');
     } finally { database.close(); }
   });
