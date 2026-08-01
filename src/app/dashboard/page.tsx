@@ -32,7 +32,11 @@ function MetricCard({ label, value, href, calculation, tone = "default" }: { lab
 
 export default function DashboardPage() {
   const data = getDashboardRepository().get(localDateString());
-  const forecast = getForecastRepository().forecast(data.asOf);
+  const forecastRepository = getForecastRepository();
+  const forecast = forecastRepository.forecast(data.asOf);
+  const historicalMonthlyBaselineCents = forecastRepository.historicalMonthlyBaseline(data.asOf);
+  const monthlyForecast = new Map(forecastRepository.monthlyForecast(data.asOf).map((point) => [point.month, point]));
+  const monthlyTrend = data.monthlyTrend.map((point) => point.isForecast ? { ...point, ...monthlyForecast.get(point.month) } : point);
   const monthLabel = new Intl.DateTimeFormat("en", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${data.monthStart}T00:00:00.000Z`));
   const monthDates = { from: data.monthStart, to: data.nextMonthStart };
   const monthEnd = new Date(`${data.nextMonthStart}T00:00:00.000Z`);
@@ -40,7 +44,7 @@ export default function DashboardPage() {
   monthDates.to = monthEnd.toISOString().slice(0, 10);
   const yearDates = { from: data.yearStart, to: data.asOf };
   const categoryYearDates = { from: data.yearStart, to: monthDates.to };
-  const categoryMonths = data.monthlyTrend.map(({ month, label }) => ({ month, label }));
+  const categoryMonths = data.monthlyTrend.filter((point) => !point.isForecast).map(({ month, label }) => ({ month, label }));
   const money = formatCurrency;
   const savingsSinceGoalStartCents = forecast ? forecast.savingsCreditedCents - forecast.goal.startingAmountCents : 0;
   const savingsNeededSinceGoalStartCents = forecast ? Math.max(0, forecast.goal.targetAmountCents - forecast.goal.startingAmountCents) : 0;
@@ -91,7 +95,7 @@ export default function DashboardPage() {
       {data.transactionCount === 0 ? <div className="rounded-xl border border-dashed bg-card p-8 text-center"><h2 className="font-semibold">No transactions yet</h2><p className="mt-2 text-sm text-muted-foreground">Add a transaction or import a CSV to populate monthly actuals and category spending.</p><div className="mt-5 flex justify-center gap-3"><Button asChild><Link href="/transactions/new">Add transaction</Link></Button><Button asChild variant="outline"><Link href="/imports">Import CSV</Link></Button></div></div> : <>
         {data.currentMonthTransactionCount === 0 && <div className="rounded-md border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">Transactions exist, but none are dated in {monthLabel}. The monthly cards and category breakdown therefore show zero or no data.</div>}
         <div className="space-y-6">
-          <section className="rounded-xl border bg-card p-5 shadow-sm sm:p-6"><div className="mb-5"><CalculationLabel className="text-xl font-semibold" calculation="For each calendar month: savings = income − net expenses. Transfers and deleted transactions are excluded.">Monthly trend</CalculationLabel><p className="mt-1 text-sm text-muted-foreground">Income, expenses, and savings from January through {monthLabel}.</p></div><MonthlyTrendChart data={data.monthlyTrend} /></section>
+          <section className="rounded-xl border bg-card p-5 shadow-sm sm:p-6"><div className="mb-5"><CalculationLabel className="text-xl font-semibold" calculation="Actual months use income minus net expenses. Future months combine expected income, recurring items, planned expenses, and the three-month variable-spending baseline. Transfers and deleted transactions are excluded.">Monthly trend</CalculationLabel><CalculationLabel className="mt-1 text-sm text-muted-foreground" calculation={`Future-month assumptions:\n• Expected income dated in each month\n• Enabled recurring income and expenses due in each month\n• Planned expenses dated in each month\n• ${money(historicalMonthlyBaselineCents)} monthly variable spending, based on the previous three complete months\n\nExceptional, recurring, deleted, and explicitly excluded transactions do not shape the variable-spending baseline.`}>All months in {data.asOf.slice(0, 4)}. Lighter bars after {monthLabel} are forecasts based on current assumptions.</CalculationLabel></div><MonthlyTrendChart data={monthlyTrend} /></section>
           <section className="rounded-xl border bg-card p-5 shadow-sm sm:p-6"><div><h2><CalculationLabel className="text-xl font-semibold" calculation="Each category is the sum of expense amounts minus refunds. Transaction splits replace the parent category amount.">Category spending for {data.asOf.slice(0, 4)}</CalculationLabel></h2><p className="mt-1 text-sm text-muted-foreground">Net expenses after refunds, with totals and each month from January through {monthLabel}.</p></div>
             {data.categorySpending.length ? <div className="mt-5 overflow-x-auto"><table className="w-full min-w-max text-sm"><thead><tr className="border-b text-left text-muted-foreground"><th className="sticky left-0 bg-card py-3 pr-6 font-medium">Category</th><th className="px-3 py-3 text-right font-medium">Year total</th>{categoryMonths.map(({ month, label }) => <th className="px-3 py-3 text-right font-medium" key={month}><span className="sr-only">{data.asOf.slice(0, 4)} </span>{label}</th>)}</tr></thead><tbody>{data.categorySpending.map((category) => {
               const categoryId = category.categoryId ?? "uncategorized";

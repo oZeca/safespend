@@ -17,6 +17,7 @@ export interface DashboardMonthlyPoint {
   incomeCents: number;
   expenseCents: number;
   savingsCents: number;
+  isForecast: boolean;
 }
 
 export interface DashboardCategorySpending {

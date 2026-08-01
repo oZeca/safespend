@@ -1,7 +1,7 @@
 import type Database from "better-sqlite3";
 import { effectiveBalanceSql } from "@/features/accounts/balance";
 import { randomUUID } from "node:crypto";
-import { calculateForecast } from "./engine";
+import { calculateForecast, calculateMonthlyForecast } from "./engine";
 import type { ForecastConfiguration, ForecastResult, GoalWrite, IncomeExpectation, PlannedExpense, RecurringItem, SavingsGoal } from "./model";
 import { dashboardDateSchema } from "@/features/dashboard/validation";
 
@@ -52,6 +52,14 @@ export function createForecastRepository(database: Database.Database, options: F
     return typeof value === "boolean" ? value : true;
   }
 
+  function historicalMonthlyBaseline(asOf: string): number {
+    const currentMonthStart = `${asOf.slice(0, 7)}-01`;
+    const baselineNet = database.prepare(`SELECT COALESCE(SUM(amount_cents), 0) FROM transactions
+      WHERE is_deleted = 0 AND date >= ? AND date < ? AND transaction_type IN ('expense', 'refund')
+        AND is_recurring = 0 AND is_exceptional = 0 AND excluded_from_forecast_baseline = 0`).pluck().get(previousThreeMonthStart(asOf), currentMonthStart) as number;
+    return Number(BigInt(Math.max(0, -baselineNet)) / 3n);
+  }
+
   return {
     getConfiguration(): ForecastConfiguration {
       return {
@@ -72,6 +80,15 @@ export function createForecastRepository(database: Database.Database, options: F
       database.prepare(`INSERT INTO settings (key, value_json, updated_at) VALUES ('include_projected_variable_expenses', ?, ?)
         ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json, updated_at = excluded.updated_at`)
         .run(JSON.stringify(include), now().toISOString());
+    },
+
+    monthlyForecast(asOfInput: string) {
+      const asOf = dashboardDateSchema.parse(asOfInput);
+      return calculateMonthlyForecast(asOf, this.getConfiguration(), historicalMonthlyBaseline(asOf));
+    },
+
+    historicalMonthlyBaseline(asOfInput: string) {
+      return historicalMonthlyBaseline(dashboardDateSchema.parse(asOfInput));
     },
 
     saveGoal(input: GoalWrite): SavingsGoal {
@@ -176,12 +193,7 @@ export function createForecastRepository(database: Database.Database, options: F
       const investmentContributionsCents = database.prepare(`SELECT COALESCE(SUM(t.amount_cents), 0) FROM transactions t JOIN accounts a ON a.id = t.account_id
         WHERE t.is_deleted = 0 AND t.transaction_type = 'transfer' AND t.amount_cents > 0 AND a.account_type = 'investment'
           AND t.date >= ? AND t.date <= ?`).pluck().get(goal.startDate, actualThrough) as number;
-      const currentMonthStart = `${asOf.slice(0, 7)}-01`;
-      const baselineStart = previousThreeMonthStart(asOf);
-      const baselineNet = database.prepare(`SELECT COALESCE(SUM(amount_cents), 0) FROM transactions
-        WHERE is_deleted = 0 AND date >= ? AND date < ? AND transaction_type IN ('expense', 'refund')
-          AND is_recurring = 0 AND is_exceptional = 0 AND excluded_from_forecast_baseline = 0`).pluck().get(baselineStart, currentMonthStart) as number;
-      const historicalMonthlyBaselineCents = Number(BigInt(Math.max(0, -baselineNet)) / 3n);
+      const historicalMonthlyBaselineCents = historicalMonthlyBaseline(asOf);
       const availableCashCents = database.prepare(`SELECT COALESCE(SUM(${effectiveBalanceSql}), 0) FROM accounts a
         WHERE a.is_archived = 0 AND a.included_in_available_cash = 1`).pluck().get() as number;
       return calculateForecast({

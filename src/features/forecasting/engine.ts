@@ -1,4 +1,4 @@
-import type { ForecastOccurrence, ForecastResult, IncomeExpectation, PlannedExpense, RecurringItem, SavingsGoal } from "./model";
+import type { ForecastConfiguration, ForecastOccurrence, ForecastResult, IncomeExpectation, MonthlyForecastPoint, PlannedExpense, RecurringItem, SavingsGoal } from "./model";
 
 interface ForecastEngineInput {
   asOf: string;
@@ -55,6 +55,24 @@ export function expandRecurringItems(items: RecurringItem[], afterDate: string, 
     }
   }
   return occurrences.sort((left, right) => left.date.localeCompare(right.date) || left.name.localeCompare(right.name));
+}
+
+export function calculateMonthlyForecast(asOf: string, configuration: ForecastConfiguration, historicalMonthlyBaselineCents: number): MonthlyForecastPoint[] {
+  const year = asOf.slice(0, 4);
+  const currentMonth = asOf.slice(0, 7);
+  const yearEnd = `${year}-12-31`;
+  const occurrences = expandRecurringItems(configuration.recurringItems, asOf, yearEnd);
+  const points: MonthlyForecastPoint[] = [];
+  for (let monthNumber = Number(currentMonth.slice(5, 7)) + 1; monthNumber <= 12; monthNumber += 1) {
+    const month = `${year}-${String(monthNumber).padStart(2, "0")}`;
+    const incomeCents = sum(configuration.incomeExpectations.filter((item) => item.expectedDate.startsWith(month)).map((item) => item.amountCents))
+      + sum(occurrences.filter((item) => item.date.startsWith(month) && item.transactionType === "income").map((item) => item.amountCents));
+    const expenseCents = historicalMonthlyBaselineCents
+      + sum(configuration.plannedExpenses.filter((item) => item.expectedDate.startsWith(month)).map((item) => item.amountCents))
+      + sum(occurrences.filter((item) => item.date.startsWith(month) && item.transactionType === "expense").map((item) => Math.abs(item.amountCents)));
+    points.push({ month, incomeCents, expenseCents, savingsCents: incomeCents - expenseCents });
+  }
+  return points;
 }
 
 function remainingMonths(asOf: string, targetDate: string) {

@@ -45,6 +45,13 @@ export interface ForecastOccurrence {
   amountCents: number;
 }
 
+export interface MonthlyForecastPoint {
+  month: string;
+  incomeCents: number;
+  expenseCents: number;
+  savingsCents: number;
+}
+
 export interface GoalWrite {
   name: string;
   startDate: string;

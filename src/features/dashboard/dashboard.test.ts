@@ -63,9 +63,10 @@ describe("dashboard repository", () => {
         yearToDateSavingsCents: 200000,
         uncategorizedSpendingCents: 0
       });
-      expect(result.monthlyTrend).toHaveLength(7);
+      expect(result.monthlyTrend).toHaveLength(12);
       expect(result.monthlyTrend[0]).toMatchObject({ month: "2026-01", incomeCents: 200000, expenseCents: 50000, savingsCents: 150000 });
-      expect(result.monthlyTrend[6]).toMatchObject({ month: "2026-07", incomeCents: 150000, expenseCents: 50000, savingsCents: 100000 });
+      expect(result.monthlyTrend[6]).toMatchObject({ month: "2026-07", incomeCents: 150000, expenseCents: 50000, savingsCents: 100000, isForecast: false });
+      expect(result.monthlyTrend[11]).toMatchObject({ month: "2026-12", incomeCents: 0, expenseCents: 0, savingsCents: 0, isForecast: true });
       expect(result.categorySpending).toEqual([
         { categoryId: "category-housing", categoryName: "Housing", spendingCents: 50000, monthlySpending: { "2026-01": 50000 } },
         { categoryId: "category-groceries", categoryName: "Groceries", spendingCents: 30000, monthlySpending: { "2026-07": 30000 } },

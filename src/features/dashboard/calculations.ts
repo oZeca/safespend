@@ -15,10 +15,10 @@ export function calculateDashboardActuals(rows: DashboardTransactionRow[], asOf:
   const current = calculateMonthlyTotals(currentRows, currentMonth);
   const ytd = calculateMonthlyTotals(rows.filter((row) => row.date >= yearStart && row.date <= asOf), "ytd");
   const monthlyTrend: DashboardMonthlyPoint[] = [];
-  for (let monthNumber = 1; monthNumber <= Number(currentMonth.slice(5, 7)); monthNumber += 1) {
+  for (let monthNumber = 1; monthNumber <= 12; monthNumber += 1) {
     const month = `${asOf.slice(0, 4)}-${String(monthNumber).padStart(2, "0")}`;
     const totals = calculateMonthlyTotals(rows.filter((row) => row.date.startsWith(month)), month);
-    monthlyTrend.push({ month, label: new Intl.DateTimeFormat("en", { month: "short", timeZone: "UTC" }).format(new Date(`${month}-01T00:00:00.000Z`)), incomeCents: totals.incomeCents, expenseCents: totals.expenseCents, savingsCents: totals.savingsCents });
+    monthlyTrend.push({ month, label: new Intl.DateTimeFormat("en", { month: "short", timeZone: "UTC" }).format(new Date(`${month}-01T00:00:00.000Z`)), incomeCents: totals.incomeCents, expenseCents: totals.expenseCents, savingsCents: totals.savingsCents, isForecast: month > currentMonth });
   }
   return {
     currentMonth,

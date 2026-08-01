@@ -105,6 +105,13 @@ describe("forecast repository and validation", () => {
         savingsCreditedCents: 0,
         historicalMonthlyBaselineCents: 20000
       });
+      expect(repository.monthlyForecast("2026-07-23")).toEqual([
+        { month: "2026-08", incomeCents: 1325000, expenseCents: 20000, savingsCents: 1305000 },
+        { month: "2026-09", incomeCents: 1000000, expenseCents: 50000, savingsCents: 950000 },
+        { month: "2026-10", incomeCents: 0, expenseCents: 20000, savingsCents: -20000 },
+        { month: "2026-11", incomeCents: 0, expenseCents: 20000, savingsCents: -20000 },
+        { month: "2026-12", incomeCents: 0, expenseCents: 20000, savingsCents: -20000 }
+      ]);
       repository.saveGoal({ name: "Updated goal", startDate: "2026-01-01", targetDate: "2026-12-31", targetAmountCents: 900000, startingAmountCents: 10000, includeInvestmentTransfers: false, minimumCashBufferCents: 100000 });
       expect((database.prepare("SELECT COUNT(*) FROM savings_goals WHERE is_active = 1").pluck().get() as number)).toBe(1);
       expect(repository.forecast("2026-07-23")?.investmentContributionsCents).toBe(0);

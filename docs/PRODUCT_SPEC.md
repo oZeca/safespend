@@ -40,7 +40,7 @@ Show:
 - Forecasted year-end savings
 - Safe to spend for the rest of the month
 - Secondary weekly and daily safe-to-spend values
-- Monthly income/expense/savings chart
+- Monthly income/expense/savings chart showing all calendar months, with future months forecast from expected income, recurring items, planned expenses, and the historical variable-spending baseline
 - Category breakdown
 - Upcoming recurring expenses
 - Off-track warnings
