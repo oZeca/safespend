@@ -80,8 +80,9 @@ MVP supports:
 2. Reusable bank-specific CSV profiles
 3. Exported `.xlsx` workbook from Google Sheets
 
-CSV uploads accept UTF-8, UTF-16 files with a byte-order mark, and legacy
-Windows-1252 exports commonly produced by banks and spreadsheet applications.
+CSV uploads accept UTF-8, UTF-16 little- and big-endian files with or without a
+byte-order mark, and legacy Windows-1252 exports commonly produced by banks and
+spreadsheet applications.
 Date mappings support date-only values and `YYYY-MM-DD hh:mm:ss` timestamps;
 timestamps are normalized to the transaction's `YYYY-MM-DD` date.
 

@@ -39,6 +39,20 @@ describe("CSV parsing and normalization", () => {
     expect(decodeCsv(utf16le)).toBe("Date");
     expect(decodeCsv(utf16be)).toBe("Date");
   });
+  it("detects BOM-less UTF-16 bank exports", () => {
+    const text = "Data lançamento;Descrição;Montante\n31-07-2026;Café;-12.50\n";
+    const utf16le = Uint8Array.from(Buffer.from(text, "utf16le"));
+    const utf16be = Uint8Array.from(utf16le);
+    for (let index = 0; index < utf16be.length; index += 2) {
+      [utf16be[index], utf16be[index + 1]] = [utf16be[index + 1], utf16be[index]];
+    }
+
+    expect(parseCsv(decodeCsv(utf16le))).toMatchObject({
+      headers: ["Data lançamento", "Descrição", "Montante"],
+      rows: [{ "Data lançamento": "31-07-2026", Descrição: "Café", Montante: "-12.50" }],
+    });
+    expect(decodeCsv(utf16be)).toBe(text);
+  });
   it("parses quoted CSV fields and detects delimiters", () => {
     const csv = parseCsv(csvText); expect(csv.delimiter).toBe(";"); expect(csv.headers).toEqual(["Date", "Description", "Amount", "Merchant"]); expect(csv.rows[0].Description).toBe("Market, central");
   });

@@ -2,6 +2,26 @@ import type { ParsedCsv } from "./model";
 
 const delimiters = [",", ";", "\t"];
 
+function detectBomlessUtf16(bytes: Uint8Array): "utf-16le" | "utf-16be" | null {
+  const sampleLength = Math.min(bytes.length - (bytes.length % 2), 4096);
+  if (sampleLength < 8) return null;
+
+  let evenNulls = 0;
+  let oddNulls = 0;
+  const pairCount = sampleLength / 2;
+  for (let index = 0; index < sampleLength; index += 2) {
+    if (bytes[index] === 0) evenNulls += 1;
+    if (bytes[index + 1] === 0) oddNulls += 1;
+  }
+
+  // Latin-based CSV exports have null high bytes for most characters. Requiring
+  // the opposite byte position to contain almost no nulls avoids misclassifying
+  // ordinary UTF-8 and Windows-1252 text.
+  if (oddNulls / pairCount >= 0.3 && evenNulls / pairCount <= 0.05) return "utf-16le";
+  if (evenNulls / pairCount >= 0.3 && oddNulls / pairCount <= 0.05) return "utf-16be";
+  return null;
+}
+
 export function decodeCsv(bytes: Uint8Array): string {
   if (bytes.length >= 2 && bytes[0] === 0xff && bytes[1] === 0xfe) {
     return new TextDecoder("utf-16le", { fatal: true }).decode(bytes);
@@ -10,6 +30,9 @@ export function decodeCsv(bytes: Uint8Array): string {
   if (bytes.length >= 2 && bytes[0] === 0xfe && bytes[1] === 0xff) {
     return new TextDecoder("utf-16be", { fatal: true }).decode(bytes);
   }
+
+  const bomlessUtf16 = detectBomlessUtf16(bytes);
+  if (bomlessUtf16) return new TextDecoder(bomlessUtf16, { fatal: true }).decode(bytes);
 
   try {
     return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
