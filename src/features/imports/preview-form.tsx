@@ -24,13 +24,13 @@ export function ImportPreviewForm({ categories, detail }: { categories: Category
       <span aria-live="polite" className="text-sm text-muted-foreground">{selectedIds.size} of {selectable.length} ready rows selected</span>
     </div>
     <div className="overflow-hidden rounded-xl border bg-card"><div className="overflow-x-auto"><table className="w-full min-w-[960px] text-left text-sm">
-      <thead className="bg-muted"><tr><th className="p-3">Import</th><th className="p-3">Row</th><th className="p-3">Date</th><th className="p-3">Description</th><th className="p-3">Merchant</th><th className="p-3 text-right">Amount</th><th className="p-3">Category</th><th className="p-3">Status</th></tr></thead>
+      <thead className="bg-muted"><tr><th className="p-3">Import</th><th className="p-3">Row</th><th className="p-3">Date</th><th className="p-3">Description</th><th className="p-3">Merchant</th><th className="whitespace-nowrap p-3 text-right">Amount</th><th className="p-3">Category</th><th className="p-3">Status</th></tr></thead>
       <tbody className="divide-y">{detail.rows.map((row) => {
         const canSelect = !row.error && !row.isExactDuplicate;
         return <tr className={!canSelect || !selectedIds.has(row.id) ? "bg-muted/30 text-muted-foreground" : undefined} key={row.id}>
           <td className="p-3"><input aria-label={`Import row ${row.rowNumber}`} checked={canSelect && selectedIds.has(row.id)} disabled={!canSelect} name="selectedRowId" onChange={() => toggle(row.id)} type="checkbox" value={row.id} /></td>
           <td className="p-3">{row.rowNumber}</td><td className="p-3">{row.date ?? "—"}</td><td className="p-3">{row.description ?? "—"}</td><td className="p-3">{row.merchant ?? "—"}</td>
-          <td className="p-3 text-right tabular-nums">{row.amountCents === null ? "—" : formatCurrency(row.amountCents)}</td>
+          <td className="whitespace-nowrap p-3 text-right tabular-nums">{row.amountCents === null ? "—" : formatCurrency(row.amountCents)}</td>
           <td className="p-3">{canSelect ? <><InlineCategorySelect action={updateImportRowCategoryAction.bind(null, detail.id, row.id)} categories={categories} categoryId={row.suggestedCategoryId} description={row.description ?? `import row ${row.rowNumber}`} />{row.matchedRuleName && <span className="mt-1 block text-xs text-muted-foreground">Suggested by {row.matchedRuleName}</span>}</> : <span>{row.suggestedCategoryName ?? "Uncategorized"}</span>}</td>
           <td className="p-3">{row.error ? <span className="text-red-700">{row.error}</span> : row.isExactDuplicate ? <span className="text-amber-700">Exact duplicate</span> : selectedIds.has(row.id) ? <span className="text-emerald-700">Ready</span> : <span>Excluded</span>}</td>
         </tr>;
