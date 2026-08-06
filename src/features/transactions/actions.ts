@@ -46,7 +46,10 @@ export async function updateTransactionAction(id: string, _state: TransactionFor
 export async function deleteTransactionAction(formData: FormData): Promise<void> {
   const id = formData.get("id"); let deleted = false;
   if (typeof id === "string" && id) { try { deleted = getTransactionRepository().softDelete(id); } catch (error) { console.error("Failed to delete transaction", error); } }
-  revalidatePath("/transactions"); redirect(`/transactions?status=${deleted ? "deleted" : "delete-error"}`);
+  const query = new URLSearchParams(typeof formData.get("returnQuery") === "string" ? String(formData.get("returnQuery")) : "");
+  query.delete("suggest");
+  query.set("status", deleted ? "deleted" : "delete-error");
+  revalidatePath("/transactions"); redirect(`/transactions?${query}`);
 }
 
 export async function updateTransactionCategoryAction(id: string, formData: FormData): Promise<InlineCategoryState> {

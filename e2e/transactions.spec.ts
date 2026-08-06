@@ -50,6 +50,10 @@ test("creates, edits, filters, and deletes a transaction", async ({ page }) => {
   await updated.getByRole("button", { name: "Delete" }).click();
   await expect(page.getByText("Transaction deleted.")).toBeVisible();
   await expect(page.getByText(`${description} updated`)).toHaveCount(0);
+  await expect(page.getByPlaceholder("Search description or merchant")).toHaveValue(String(unique));
+  await expect(page.getByLabel("Amount comparison")).toHaveValue("equal");
+  await expect(page.getByLabel("Transaction amount")).toHaveValue("-50.00");
+  await expect(page).toHaveURL(new RegExp(`search=${unique}`));
 });
 
 test("splits a transaction and links a transfer", async ({ page }) => {

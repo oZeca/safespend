@@ -54,7 +54,7 @@ Archived accounts retain their history and are excluded from active summary tota
 
 ## Transactions and categories
 
-The Transactions page supports paginated search and filtering by account, category, type, and date range. Manual transactions can be created, edited, categorized, annotated, and soft-deleted. Amounts are signed account movements: income and refunds are positive, expenses are negative, and transfers may use either sign.
+The Transactions page supports paginated search and filtering by account, category, type, and date range. Manual transactions can be created, edited, categorized, annotated, and soft-deleted; deleting from a filtered listing preserves the active filters. Amounts are signed account movements: income and refunds are positive, expenses are negative, and transfers may use either sign.
 
 Monthly totals exclude transfers and deleted rows. Refunds reduce expenses. The initial category set is installed idempotently by migration `0003`; category editing remains out of scope. Manual transaction changes do not alter the account balance entered on the Accounts page.
 
