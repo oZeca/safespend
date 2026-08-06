@@ -2,6 +2,7 @@ export const transactionTypes = ["income", "expense", "transfer", "refund"] as c
 export type TransactionType = (typeof transactionTypes)[number];
 
 export const transactionTypeLabels: Record<TransactionType, string> = { income: "Income", expense: "Expense", transfer: "Transfer", refund: "Refund" };
+export const orphanedAccountFilter = "orphaned";
 
 export interface CategoryOption { id: string; name: string; kind: "income" | "expense" | "transfer" | "mixed"; }
 export interface AccountOption { id: string; name: string; currency: string; }

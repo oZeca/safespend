@@ -12,11 +12,12 @@ test("creates, edits, filters, and deletes a transaction", async ({ page }) => {
   await page.getByRole("combobox", { name: "Account", exact: true }).selectOption({ label: accountName });
   await page.getByLabel("Description").fill(description);
   await page.getByLabel("Merchant").fill("E2E Market");
-  await page.getByLabel("Amount").fill("-45.20");
+  await page.locator('input[name="amount"]').fill("-45.20");
   await page.getByRole("combobox", { name: "Category", exact: true }).selectOption({ label: "Groceries" });
   await page.getByLabel("Notes").fill("Created by Playwright");
   await page.getByRole("button", { name: "Create transaction" }).click();
   await expect(page.getByText("Transaction created.")).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Account", exact: true }).getByRole("option", { name: "Orphaned (no account)" })).toHaveCount(1);
   const row = page.getByRole("article").filter({ hasText: description });
   await expect(row.getByText("-€45.20")).toBeVisible();
   const inlineCategory = row.getByRole("combobox", { name: `Category for ${description}` });
@@ -68,7 +69,7 @@ test("splits a transaction and links a transfer", async ({ page }) => {
     await page.goto("/transactions/new");
     await page.getByRole("combobox", { name: "Account", exact: true }).selectOption({ label: account });
     await page.getByLabel("Description").fill(description);
-    await page.getByLabel("Amount").fill(amount);
+    await page.locator('input[name="amount"]').fill(amount);
     await page.getByRole("combobox", { name: "Type", exact: true }).selectOption(type);
     await page.getByRole("button", { name: "Create transaction" }).click();
   };

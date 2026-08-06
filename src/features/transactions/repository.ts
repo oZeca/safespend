@@ -1,7 +1,7 @@
 import type Database from "better-sqlite3";
 import { randomUUID } from "node:crypto";
 import { calculateMonthlyTotals } from "./totals";
-import type { AccountOption, CategoryOption, Transaction, TransactionFilters, TransactionPage, TransactionType } from "./model";
+import { orphanedAccountFilter, type AccountOption, type CategoryOption, type Transaction, type TransactionFilters, type TransactionPage, type TransactionType } from "./model";
 import { normalizeDescription } from "./validation";
 
 interface TransactionRow {
@@ -15,11 +15,11 @@ export interface TransactionWrite {
 }
 export interface TransactionRepositoryOptions { now?: () => Date; id?: () => string; }
 
-const select = `SELECT t.id, t.account_id AS accountId, a.name AS accountName, t.date, t.description, t.normalized_description AS normalizedDescription, t.merchant,
+const select = `SELECT t.id, COALESCE(t.account_id, '') AS accountId, COALESCE(a.name, 'Orphaned account') AS accountName, t.date, t.description, t.normalized_description AS normalizedDescription, t.merchant,
   t.amount_cents AS amountCents, t.transaction_type AS transactionType, t.category_id AS categoryId, c.name AS categoryName, t.notes,
   (SELECT COUNT(*) FROM transaction_splits ts WHERE ts.transaction_id = t.id) AS splitCount, t.is_recurring AS isRecurring, t.is_exceptional AS isExceptional,
   t.excluded_from_forecast_baseline AS excludedFromForecastBaseline, t.excluded_from_account_balance AS excludedFromAccountBalance, t.created_at AS createdAt, t.updated_at AS updatedAt
-  FROM transactions t JOIN accounts a ON a.id = t.account_id LEFT JOIN categories c ON c.id = t.category_id`;
+  FROM transactions t LEFT JOIN accounts a ON a.id = t.account_id LEFT JOIN categories c ON c.id = t.category_id`;
 
 function escapeLike(value: string): string { return value.replace(/[\\%_]/g, "\\$&"); }
 function mapTransaction(row: TransactionRow): Transaction {
@@ -39,7 +39,11 @@ export function createTransactionRepository(database: Database.Database, options
     list(filters: TransactionFilters): TransactionPage {
       const where = ["t.is_deleted = 0"]; const parameters: Record<string, string | number> = {};
       if (filters.search) { where.push("(t.normalized_description LIKE @search ESCAPE '\\' OR LOWER(COALESCE(t.merchant, '')) LIKE @search ESCAPE '\\')"); parameters.search = `%${escapeLike(filters.search.toLocaleLowerCase("en"))}%`; }
-      if (filters.accountId) { where.push("t.account_id = @accountId"); parameters.accountId = filters.accountId; }
+      if (filters.accountId === orphanedAccountFilter) {
+        where.push("NOT EXISTS (SELECT 1 FROM accounts filter_account WHERE filter_account.id = t.account_id AND filter_account.is_archived = 0)");
+      } else if (filters.accountId) {
+        where.push("t.account_id = @accountId"); parameters.accountId = filters.accountId;
+      }
       if (filters.categoryId) {
         where.push(filters.categoryId === "uncategorized"
           ? "t.category_id IS NULL AND NOT EXISTS (SELECT 1 FROM transaction_splits filter_splits WHERE filter_splits.transaction_id = t.id)"

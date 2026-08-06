@@ -7,6 +7,7 @@ import { runMigrations } from "@/db/migrate";
 import { createAccountRepository } from "@/features/accounts/repository";
 import { createTransactionRepository, type TransactionWrite } from "./repository";
 import { calculateMonthlyTotals } from "./totals";
+import { orphanedAccountFilter } from "./model";
 import { normalizeDescription, parseTransactionFilterAmount, transactionInputSchema } from "./validation";
 
 const directories: string[] = [];
@@ -71,6 +72,29 @@ describe("transaction repository", () => {
       expect(repository.list({ amountComparison: "equal", amountCents: -5000, page: 1, pageSize: 20 }).items.map((item) => item.description)).toEqual(["Exact expense"]);
       expect(repository.list({ amountComparison: "more", amountCents: -5000, page: 1, pageSize: 20 }).items.map((item) => item.description)).toEqual(["Income", "Small expense"]);
       expect(repository.list({ amountComparison: "less", amountCents: -5000, page: 1, pageSize: 20 }).items.map((item) => item.description)).toEqual(["Large expense"]);
+    } finally { database.close(); }
+  });
+
+  it("filters transactions whose linked account is archived or no longer exists", () => {
+    const { database, repository, account } = setup();
+    try {
+      const orphaned = repository.create({ ...base(account.id), description: "Legacy orphan" });
+      database.prepare("UPDATE accounts SET is_archived = 1 WHERE id = ?").run(account.id);
+
+      expect(repository.list({ accountId: orphanedAccountFilter, page: 1, pageSize: 20 }).items).toEqual([
+        expect.objectContaining({ id: orphaned.id, accountId: account.id, accountName: "Main" }),
+      ]);
+
+      database.pragma("foreign_keys = OFF");
+      database.prepare("DELETE FROM accounts WHERE id = ?").run(account.id);
+
+      expect(repository.list({ page: 1, pageSize: 20 }).items).toEqual([
+        expect.objectContaining({ id: orphaned.id, accountId: account.id, accountName: "Orphaned account" }),
+      ]);
+      expect(repository.list({ accountId: orphanedAccountFilter, page: 1, pageSize: 20 }).items).toEqual([
+        expect.objectContaining({ id: orphaned.id }),
+      ]);
+      expect(repository.list({ accountId: "another-account", page: 1, pageSize: 20 }).totalCount).toBe(0);
     } finally { database.close(); }
   });
 
