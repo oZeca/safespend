@@ -1,5 +1,7 @@
 # SafeSpend
 
+Use the eye control in the application header to blur or reveal sensitive financial amounts. The privacy preference is stored only in the current browser.
+
 Private, single-user personal finance software. The application currently includes accounts, transactions, generic CSV and Excel imports, categorization rules, splits, linked transfers, an actuals dashboard, annual savings goals, expected-scenario forecasting, backup and restore, CSV export, and production container support. Multi-sheet Google Sheets workbook migration and budgets remain outside the implemented task set.
 
 ## Local setup

@@ -9,3 +9,21 @@
   body { @apply bg-background text-foreground antialiased; }
   html { -webkit-tap-highlight-color: transparent; }
 }
+
+@layer utilities {
+  [data-privacy="hidden"] main :is(.tabular-nums, [data-sensitive], input[inputmode="decimal"], [role="img"][aria-label*="chart"]) {
+    filter: blur(0.38rem);
+    transition: filter 150ms ease;
+    user-select: none;
+  }
+
+  [data-privacy="visible"] main :is(.tabular-nums, [data-sensitive], input[inputmode="decimal"], [role="img"][aria-label*="chart"]) {
+    transition: filter 150ms ease;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-privacy] main :is(.tabular-nums, [data-sensitive], input[inputmode="decimal"], [role="img"][aria-label*="chart"]) {
+      transition: none;
+    }
+  }
+}

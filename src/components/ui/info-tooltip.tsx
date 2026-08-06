@@ -21,6 +21,7 @@ export function InfoTooltip({ calculation }: { calculation: string }) {
       <Info aria-hidden="true" className="h-3.5 w-3.5" />
     </button>
     <span
+      data-sensitive
       className={`${open ? "block" : "hidden"} pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 w-max max-w-[min(22rem,calc(100vw-2rem))] -translate-x-1/2 whitespace-pre-line rounded-md bg-slate-950 px-3 py-2 text-left text-xs font-normal leading-relaxed text-white shadow-lg group-hover:block group-focus-within:block`}
       id={id}
       role="tooltip"
