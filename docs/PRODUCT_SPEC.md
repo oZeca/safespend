@@ -57,6 +57,7 @@ Safe to spend is the main visual priority.
 - Change a transaction's category directly from the list, saving each selection immediately
 - Split across categories
 - Mark recurring or transfer
+- Selecting a transfer-kind category automatically sets and locks the transaction type to transfer so it is excluded consistently from income and expense totals.
 - Mark internal movements between pockets or funds so they remain visible without changing a consolidated account balance
 - Add notes
 - Bulk categorize

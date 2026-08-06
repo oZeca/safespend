@@ -22,8 +22,11 @@ function validate(formData: FormData, includeAccountId?: string): { success: fal
   if (!result.success) return { success: false, state: { message: "Check the highlighted fields.", errors: result.error.flatten().fieldErrors, values: valuesFromFormData(formData) } };
   const options = getTransactionRepository().listOptions(includeAccountId);
   if (!options.accounts.some((account) => account.id === result.data.accountId)) return { success: false, state: { message: "Select an active account.", errors: { accountId: ["The selected account is unavailable"] }, values: valuesFromFormData(formData) } };
-  if (result.data.categoryId && !options.categories.some((category) => category.id === result.data.categoryId)) return { success: false, state: { message: "Select an active category.", errors: { categoryId: ["The selected category is unavailable"] }, values: valuesFromFormData(formData) } };
-  return { success: true, data: toWrite(result.data) };
+  const category = result.data.categoryId ? options.categories.find((option) => option.id === result.data.categoryId) : undefined;
+  if (result.data.categoryId && !category) return { success: false, state: { message: "Select an active category.", errors: { categoryId: ["The selected category is unavailable"] }, values: valuesFromFormData(formData) } };
+  const data = toWrite(result.data);
+  if (category?.kind === "transfer") data.transactionType = "transfer";
+  return { success: true, data };
 }
 
 export async function createTransactionAction(_state: TransactionFormState, formData: FormData): Promise<TransactionFormState> {

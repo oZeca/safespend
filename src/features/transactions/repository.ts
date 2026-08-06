@@ -97,8 +97,17 @@ export function createTransactionRepository(database: Database.Database, options
       const existing = this.findById(id);
       if (!existing) return null;
       if (existing.splitCount > 0) throw new Error("Edit split categories instead.");
-      const result = database.prepare("UPDATE transactions SET category_id = ?, updated_at = ? WHERE id = ? AND is_deleted = 0")
-        .run(categoryId, now().toISOString(), id);
+      const category = categoryId
+        ? database.prepare("SELECT kind FROM categories WHERE id = ? AND is_archived = 0").get(categoryId) as { kind: CategoryOption["kind"] } | undefined
+        : undefined;
+      if (categoryId && !category) throw new Error("Category unavailable.");
+      const transactionType = category?.kind === "transfer"
+        ? "transfer"
+        : existing.transactionType === "transfer"
+          ? existing.amountCents < 0 ? "expense" : "income"
+          : existing.transactionType;
+      const result = database.prepare("UPDATE transactions SET category_id = ?, transaction_type = ?, updated_at = ? WHERE id = ? AND is_deleted = 0")
+        .run(categoryId, transactionType, now().toISOString(), id);
       return result.changes ? this.findById(id) : null;
     },
     softDelete(id: string): boolean {

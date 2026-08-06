@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { formatMoneyInput } from "@/features/accounts/validation";
@@ -13,6 +13,8 @@ function FieldError({ errors }: { errors?: string[] }) { return errors?.length ?
 
 export function TransactionForm({ action, accounts, categories, transaction, defaultDate }: { action: FormAction; accounts: AccountOption[]; categories: CategoryOption[]; transaction?: Transaction; defaultDate: string }) {
   const [state, formAction] = useActionState(action, {}); const values = state.values;
+  const [selectedCategoryId, setSelectedCategoryId] = useState(values?.categoryId ?? transaction?.categoryId ?? "");
+  const transferCategorySelected = categories.find((category) => category.id === selectedCategoryId)?.kind === "transfer";
   const value = (key: string, fallback: string) => values?.[key] ?? fallback;
   const checked = (key: string, fallback: boolean) => values ? values[key] === "on" : fallback;
   const inputClass = "h-10 w-full rounded-md border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
@@ -24,8 +26,8 @@ export function TransactionForm({ action, accounts, categories, transaction, def
       <label className="space-y-2 sm:col-span-2"><span className="text-sm font-medium">Description</span><input className={inputClass} defaultValue={value("description", transaction?.description ?? "")} name="description" required /><FieldError errors={state.errors?.description} /></label>
       <label className="space-y-2"><span className="text-sm font-medium">Merchant <span className="font-normal text-muted-foreground">(optional)</span></span><input className={inputClass} defaultValue={value("merchant", transaction?.merchant ?? "")} name="merchant" /><FieldError errors={state.errors?.merchant} /></label>
       <label className="space-y-2"><span className="text-sm font-medium">Amount</span><input className={inputClass} defaultValue={value("amount", transaction ? formatMoneyInput(transaction.amountCents) : "")} inputMode="decimal" name="amount" placeholder="-45.20" required /><p className="text-xs text-muted-foreground">Negative leaves the account; positive enters it.</p><FieldError errors={state.errors?.amount} /></label>
-      <label className="space-y-2"><span className="text-sm font-medium">Type</span><select className={inputClass} defaultValue={value("transactionType", transaction?.transactionType ?? "expense")} name="transactionType">{transactionTypes.map((type) => <option key={type} value={type}>{transactionTypeLabels[type]}</option>)}</select><FieldError errors={state.errors?.transactionType} /></label>
-      <label className="space-y-2"><span className="text-sm font-medium">Category</span><select className={inputClass} defaultValue={value("categoryId", transaction?.categoryId ?? "")} name="categoryId"><option value="">Uncategorized</option>{categories.filter((category) => category.name !== "Uncategorized").map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select><FieldError errors={state.errors?.categoryId} /></label>
+      <label className="space-y-2"><span className="text-sm font-medium">Type</span>{transferCategorySelected && <input name="transactionType" type="hidden" value="transfer" />}<select className={inputClass} defaultValue={value("transactionType", transaction?.transactionType ?? "expense")} disabled={transferCategorySelected} name={transferCategorySelected ? undefined : "transactionType"}>{transactionTypes.map((type) => <option key={type} value={type}>{transactionTypeLabels[type]}</option>)}</select>{transferCategorySelected && <p className="text-xs text-muted-foreground">Transfer categories are always excluded from income and expenses.</p>}<FieldError errors={state.errors?.transactionType} /></label>
+      <label className="space-y-2"><span className="text-sm font-medium">Category</span><select className={inputClass} name="categoryId" onChange={(event) => setSelectedCategoryId(event.currentTarget.value)} value={selectedCategoryId}><option value="">Uncategorized</option>{categories.filter((category) => category.name !== "Uncategorized").map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select><FieldError errors={state.errors?.categoryId} /></label>
       <label className="space-y-2 sm:col-span-2"><span className="text-sm font-medium">Notes <span className="font-normal text-muted-foreground">(optional)</span></span><textarea className="min-h-24 w-full rounded-md border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" defaultValue={value("notes", transaction?.notes ?? "")} name="notes" /><FieldError errors={state.errors?.notes} /></label>
       <fieldset className="space-y-3 rounded-md border p-4 sm:col-span-2"><legend className="px-1 text-sm font-medium">Forecast treatment</legend>
         <label className="flex items-start gap-3"><input className="mt-1 h-4 w-4 accent-emerald-700" defaultChecked={checked("isRecurring", transaction?.isRecurring ?? false)} name="isRecurring" type="checkbox" /><span><span className="block text-sm">Recurring actual</span><span className="text-xs text-muted-foreground">Exclude this actual from the variable-spending baseline because it is represented by a recurring assumption.</span></span></label>

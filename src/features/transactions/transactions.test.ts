@@ -29,6 +29,9 @@ describe("transaction repository", () => {
       expect(repository.list({ transactionType: "income", page: 1, pageSize: 20 }).totalCount).toBe(0);
       expect(repository.update(created.id, { ...base(account.id), description: "Super Market", notes: null })).toMatchObject({ description: "Super Market", notes: null });
       expect(repository.updateCategory(created.id, "category-shopping")).toMatchObject({ categoryId: "category-shopping", categoryName: "Shopping" });
+      expect(repository.updateCategory(created.id, "category-transfers")).toMatchObject({ categoryId: "category-transfers", transactionType: "transfer" });
+      expect(repository.monthlyTotals("2026-07")).toEqual({ month: "2026-07", incomeCents: 0, expenseCents: 0, savingsCents: 0 });
+      expect(repository.updateCategory(created.id, "category-shopping")).toMatchObject({ categoryId: "category-shopping", transactionType: "expense" });
       expect(repository.updateCategory(created.id, null)).toMatchObject({ categoryId: null, categoryName: null });
       expect(repository.softDelete(created.id)).toBe(true);
       expect(repository.softDelete(created.id)).toBe(false);
