@@ -62,6 +62,12 @@ describe("CSV parsing and normalization", () => {
     expect(parseLocalizedMoney("1.234,56", "decimal_comma")).toBe(123456);
     expect(parseLocalizedMoney("1,234.56", "decimal_dot")).toBe(123456);
   });
+  it("accepts fixed-precision bank amounts that resolve exactly to cents", () => {
+    expect(parseLocalizedMoney("10.000000", "decimal_dot")).toBe(1000);
+    expect(parseLocalizedMoney("4990.000000", "decimal_dot")).toBe(499000);
+    expect(parseLocalizedMoney("-1.234,560000", "decimal_comma")).toBe(-123456);
+    expect(parseLocalizedMoney("10.000001", "decimal_dot")).toBeNull();
+  });
   it("parses required date formats and rejects impossible dates", () => {
     expect(parseLocalizedDate("2026-07-21", "YYYY-MM-DD")).toBe("2026-07-21");
     expect(parseLocalizedDate("2026-07-21 14:30:59", "YYYY-MM-DD hh:mm:ss")).toBe("2026-07-21");

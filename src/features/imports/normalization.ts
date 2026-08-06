@@ -8,8 +8,12 @@ export function parseLocalizedMoney(value: string, format: DecimalFormat): numbe
   if (cleaned.startsWith("-")) { negative = true; cleaned = cleaned.slice(1); } else if (cleaned.startsWith("+")) cleaned = cleaned.slice(1);
   const decimal = format === "decimal_comma" ? "," : "."; const thousands = format === "decimal_comma" ? "." : ",";
   cleaned = cleaned.split(thousands).join(""); const parts = cleaned.split(decimal);
-  if (parts.length > 2 || !/^\d+$/.test(parts[0] ?? "") || (parts[1] !== undefined && !/^\d{1,2}$/.test(parts[1]))) return null;
-  const cents = BigInt(parts[0]) * 100n + BigInt((parts[1] ?? "").padEnd(2, "0") || "0"); const signed = negative ? -cents : cents;
+  const fractional = parts[1] ?? "";
+  if (parts.length > 2 || !/^\d+$/.test(parts[0] ?? "") || (fractional && !/^\d+$/.test(fractional))) return null;
+  // Some bank exports use fixed six-decimal amounts. Accept extra precision only
+  // when it represents an exact number of cents; never round currency silently.
+  if (fractional.length > 2 && !/^0*$/.test(fractional.slice(2))) return null;
+  const cents = BigInt(parts[0]) * 100n + BigInt(fractional.slice(0, 2).padEnd(2, "0") || "0"); const signed = negative ? -cents : cents;
   if (signed > BigInt(Number.MAX_SAFE_INTEGER) || signed < BigInt(Number.MIN_SAFE_INTEGER)) return null;
   return Number(signed);
 }

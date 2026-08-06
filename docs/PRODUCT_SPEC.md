@@ -83,6 +83,8 @@ MVP supports:
 CSV uploads accept UTF-8, UTF-16 little- and big-endian files with or without a
 byte-order mark, and legacy Windows-1252 exports commonly produced by banks and
 spreadsheet applications.
+Amount mappings accept fixed-precision bank values with trailing decimal zeroes
+(for example, `4990.000000`) when they resolve exactly to integer cents.
 Date mappings support date-only values and `YYYY-MM-DD hh:mm:ss` timestamps;
 timestamps are normalized to the transaction's `YYYY-MM-DD` date.
 
