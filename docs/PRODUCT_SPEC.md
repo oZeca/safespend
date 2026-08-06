@@ -95,8 +95,9 @@ Flow:
 5. Flag invalid rows.
 6. Detect exact and probable duplicates.
 7. Apply categorization rules.
-8. Confirm.
-9. Show results.
+8. Review and edit each ready row's category.
+9. Confirm.
+10. Show results.
 
 Re-importing the same file must not create duplicate transactions.
 

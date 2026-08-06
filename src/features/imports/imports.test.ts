@@ -158,6 +158,18 @@ describe("CSV import repository", () => {
       expect(database.prepare("SELECT category_id, transaction_type FROM transactions WHERE source_import_id = ? AND source_row_number = 2").get(importId)).toEqual({ category_id: "category-groceries", transaction_type: "expense" });
     } finally { database.close(); }
   });
+  it("saves a manually selected preview category and uses it on confirmation", () => {
+    const { database, account, repository } = setup();
+    try {
+      const importId = repository.stage("manual-category.csv", "manual-category-sha", account.id, parseCsv(csvText));
+      const preview = repository.prepare(importId, mapping)!;
+      expect(repository.updateSuggestedCategory(importId, preview.rows[0].id, "category-shopping")).toBe(true);
+      expect(repository.findById(importId)!.rows[0]).toMatchObject({ suggestedCategoryId: "category-shopping", suggestedCategoryName: "Shopping" });
+      repository.confirm(importId);
+      expect(database.prepare("SELECT category_id FROM transactions WHERE source_import_id = ? AND source_row_number = 2").get(importId)).toEqual({ category_id: "category-shopping" });
+      expect(repository.updateSuggestedCategory(importId, preview.rows[0].id, "category-groceries")).toBe(false);
+    } finally { database.close(); }
+  });
   it("marks exact rows as duplicates when the same CSV is imported again", () => {
     const { database, account, repository } = setup();
     try {

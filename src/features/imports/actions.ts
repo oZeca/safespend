@@ -11,6 +11,7 @@ import { mappingFromFormData, mappingSchema } from "./validation";
 import { getTransactionRepository } from "@/features/transactions/server-repository";
 
 export interface ImportActionState { message?: string; errors?: Record<string, string[]>; }
+export interface ImportInlineCategoryState { saved?: boolean; error?: string; }
 
 function mappingHeadersValid(mapping: CsvMapping, headers: string[]) { return [mapping.dateColumn, mapping.descriptionColumn, mapping.amountColumn, mapping.merchantColumn].filter(Boolean).every((column) => headers.includes(column!)); }
 
@@ -48,4 +49,20 @@ export async function confirmImportAction(formData: FormData): Promise<void> {
   const importId = String(formData.get("importId") ?? ""); const selectedRowIds = formData.getAll("selectedRowId").map(String); let completed = false;
   try { completed = Boolean(getImportRepository().confirm(importId, selectedRowIds)); } catch (error) { console.error("Failed to confirm import", error); }
   revalidatePath("/imports"); revalidatePath("/transactions"); redirect(completed ? `/imports/${importId}/preview?status=completed` : "/imports?status=confirm-error");
+}
+
+export async function updateImportRowCategoryAction(importId: string, rowId: string, formData: FormData): Promise<ImportInlineCategoryState> {
+  const categoryValue = formData.get("categoryId");
+  if (typeof categoryValue !== "string") return { error: "Invalid category." };
+  const categoryId = categoryValue.trim() || null;
+  const categories = getTransactionRepository().listOptions().categories;
+  if (categoryId && !categories.some((category) => category.id === categoryId)) return { error: "Category unavailable." };
+  try {
+    if (!getImportRepository().updateSuggestedCategory(importId, rowId, categoryId)) return { error: "Import row unavailable." };
+  } catch (error) {
+    console.error("Failed to update import row category", error);
+    return { error: error instanceof Error ? error.message : "Could not save category." };
+  }
+  revalidatePath(`/imports/${importId}/preview`);
+  return { saved: true };
 }

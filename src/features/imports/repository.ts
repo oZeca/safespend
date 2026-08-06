@@ -69,6 +69,12 @@ export function createImportRepository(database: Database.Database, options: Imp
         database.prepare("UPDATE imports SET profile_id = ?, status = 'preview', error_count = ?, skipped_count = ? WHERE id = ?").run(profileId, errorCount, duplicateCount, importId);
       })(); return detail(importId);
     },
+    updateSuggestedCategory(importId: string, rowId: string, categoryId: string | null): boolean {
+      const result = database.prepare(`UPDATE import_rows SET suggested_category_id = ?
+        WHERE id = ? AND import_id = ? AND EXISTS (SELECT 1 FROM imports WHERE id = ? AND status = 'preview')`)
+        .run(categoryId, rowId, importId, importId);
+      return result.changes > 0;
+    },
     confirm(importId: string, selectedRowIds?: string[]): ImportDetail | null {
       const importRecord = detail(importId); if (!importRecord || importRecord.status !== "preview") return null; const timestamp = now().toISOString(); let importedCount = 0; let skippedCount = 0;
       let excludedCount = 0; const selected = selectedRowIds ? new Set(selectedRowIds) : null;
