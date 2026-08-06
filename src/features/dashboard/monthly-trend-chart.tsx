@@ -5,7 +5,7 @@ import { formatCurrency } from "@/features/accounts/money";
 import type { DashboardMonthlyPoint } from "./model";
 
 export function MonthlyTrendChart({ data }: { data: DashboardMonthlyPoint[] }) {
-  return <div className="h-72 w-full" aria-label="Monthly income, expenses, and savings chart" role="img">
+  return <div className="h-72 w-full min-w-0 max-w-full overflow-hidden" aria-label="Monthly income, expenses, and savings chart" role="img">
     <ResponsiveContainer height="100%" width="100%">
       <BarChart data={data} margin={{ left: 0, right: 8, top: 8 }}>
         <CartesianGrid strokeDasharray="3 3" vertical={false} />

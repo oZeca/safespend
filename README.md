@@ -18,6 +18,14 @@ npm run dev
 
 Open <http://localhost:3000>. The database defaults to `./data/safespend.db`; set `DATABASE_PATH` to an absolute or relative alternative.
 
+## Progressive web app
+
+SafeSpend can be installed as a standalone progressive web app. Installation requires HTTPS outside localhost; the recommended `tailscale serve 3000` deployment supplies a private HTTPS origin. A quiet installation control and iPhone/iPad instructions appear in Settings when applicable.
+
+Offline behavior is intentionally limited: the service worker caches only a self-contained connection screen and public brand icons. It does not cache financial pages, React Server Component responses, API responses, exports, backups, imports, or form submissions, and it never queues writes. Reconnect before viewing current values or making changes.
+
+To remove local PWA files, uninstall SafeSpend and clear the site data for its origin in the browser. Developers can enable service-worker registration outside production with `NEXT_PUBLIC_ENABLE_PWA=1`; leave it unset during ordinary local development to avoid stale workers.
+
 ## Commands
 
 ```bash
