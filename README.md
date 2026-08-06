@@ -1,6 +1,6 @@
 # SafeSpend
 
-Private, single-user personal finance software. The application currently includes accounts, transactions, generic CSV imports, categorization rules, splits, linked transfers, an actuals dashboard, annual savings goals, expected-scenario forecasting, backup and restore, CSV export, and production container support. Google Sheets workbook import and budgets remain outside the implemented task set.
+Private, single-user personal finance software. The application currently includes accounts, transactions, generic CSV and Excel imports, categorization rules, splits, linked transfers, an actuals dashboard, annual savings goals, expected-scenario forecasting, backup and restore, CSV export, and production container support. Multi-sheet Google Sheets workbook migration and budgets remain outside the implemented task set.
 
 ## Local setup
 
@@ -66,9 +66,9 @@ An outgoing transaction can be marked as a transfer and optionally linked to an 
 
 When individual credit-card purchases are imported as expenses, classify the bank payment and matching card credit as a transfer. This keeps the payment out of expense totals and avoids counting the card spending twice. Automatic transfer matching and investment-transfer savings-goal treatment are not part of Task 7.
 
-## CSV imports
+## CSV and Excel imports
 
-The Imports page accepts UTF-8 CSV files up to 5 MB and 5,000 data rows. Comma, semicolon, and tab delimiters are detected automatically. The mapping step supports `YYYY-MM-DD`, `DD/MM/YYYY`, and `DD-MM-YYYY` dates plus decimal-comma and decimal-point amounts. Mappings may be saved as reusable profiles for files with matching headers.
+The Imports page accepts `.csv`, `.xls`, and `.xlsx` files up to 5 MB and 5,000 data rows. Excel imports use the first worksheet. CSV encoding and delimiter detection support common bank exports. The mapping step supports `YYYY-MM-DD`, `DD/MM/YYYY`, and `DD-MM-YYYY` dates plus decimal-comma and decimal-point amounts. Mappings may be saved as reusable profiles for files with matching headers.
 
 Preview flags invalid and exact-duplicate rows before confirmation. Duplicate matching uses account, normalized date, integer-cent amount, and normalized description, with occurrence counts preserving legitimate repeated identical transactions even when CSV row positions change. Ready rows are selected by default and can be individually excluded before confirmation. Confirmation is transactional, skips invalid/duplicate/excluded rows, preserves the complete original row JSON, and stores stable SHA-256 source fingerprints. Positive amounts default to income and negative amounts to expenses; a matching categorization rule may override the category and type.
 

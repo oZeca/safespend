@@ -33,13 +33,13 @@ export function createImportRepository(database: Database.Database, options: Imp
       return (database.prepare("SELECT id, name, configuration_json AS configurationJson FROM import_profiles ORDER BY name COLLATE NOCASE").all() as Array<{ id: string; name: string; configurationJson: string }>).map((profile) => ({ id: profile.id, name: profile.name, configuration: JSON.parse(profile.configurationJson) as CsvMapping }));
     },
     findProfile(id: string): ImportProfile | null { return this.listProfiles().find((profile) => profile.id === id) ?? null; },
-    stage(fileName: string, fileSha256: string, accountId: string, csv: ParsedCsv): string {
+    stage(fileName: string, fileSha256: string, accountId: string, csv: ParsedCsv, importType = "csv"): string {
       const id = makeId(); const timestamp = now().toISOString();
       database.transaction(() => {
-        database.prepare("INSERT INTO imports (id, file_name, file_sha256, import_type, account_id, profile_id, status, row_count, imported_count, skipped_count, error_count, created_at, completed_at, detected_delimiter) VALUES (?, ?, ?, 'csv', ?, NULL, 'mapping', ?, 0, 0, 0, ?, NULL, ?)")
-          .run(id, fileName, fileSha256, accountId, csv.rows.length, timestamp, csv.delimiter);
+        database.prepare("INSERT INTO imports (id, file_name, file_sha256, import_type, account_id, profile_id, status, row_count, imported_count, skipped_count, error_count, created_at, completed_at, detected_delimiter) VALUES (?, ?, ?, ?, ?, NULL, 'mapping', ?, 0, 0, 0, ?, NULL, ?)")
+          .run(id, fileName, fileSha256, importType, accountId, csv.rows.length, timestamp, csv.delimiter);
         const insert = database.prepare("INSERT INTO import_rows (id, import_id, row_number, original_payload_json, created_at) VALUES (?, ?, ?, ?, ?)");
-        csv.rows.forEach((row, index) => insert.run(makeId(), id, index + 2, JSON.stringify(row), timestamp));
+        csv.rows.forEach((row, index) => insert.run(makeId(), id, csv.rowNumbers?.[index] ?? index + 2, JSON.stringify(row), timestamp));
       })(); return id;
     },
     prepare(importId: string, mapping: CsvMapping, profileName?: string, existingProfileId?: string): ImportDetail | null {

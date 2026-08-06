@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { decodeCsv, parseCsv } from "./csv";
 import type { CsvMapping } from "./model";
+import { parseSpreadsheet } from "./spreadsheet";
 import { getImportRepository } from "./server-repository";
 import { mappingFromFormData, mappingSchema } from "./validation";
 import { getTransactionRepository } from "@/features/transactions/server-repository";
@@ -15,16 +16,17 @@ function mappingHeadersValid(mapping: CsvMapping, headers: string[]) { return [m
 
 export async function uploadCsvAction(_state: ImportActionState, formData: FormData): Promise<ImportActionState> {
   const file = formData.get("file"); const accountId = String(formData.get("accountId") ?? ""); const profileId = String(formData.get("profileId") ?? "");
-  if (!(file instanceof File) || !file.name) return { message: "Choose a CSV file.", errors: { file: ["CSV file is required"] } };
-  if (file.size > 5 * 1024 * 1024) return { message: "The CSV is too large.", errors: { file: ["Maximum file size is 5 MB"] } };
-  if (!file.name.toLocaleLowerCase("en").endsWith(".csv")) return { message: "Choose a .csv file.", errors: { file: ["Only CSV files are supported"] } };
+  if (!(file instanceof File) || !file.name) return { message: "Choose a CSV or Excel file.", errors: { file: ["Import file is required"] } };
+  if (file.size > 5 * 1024 * 1024) return { message: "The file is too large.", errors: { file: ["Maximum file size is 5 MB"] } };
+  const extension = file.name.toLocaleLowerCase("en").match(/\.(csv|xlsx|xls)$/)?.[1];
+  if (!extension) return { message: "Choose a .csv, .xls, or .xlsx file.", errors: { file: ["Unsupported file extension"] } };
   if (!getTransactionRepository().listOptions().accounts.some((account) => account.id === accountId)) return { message: "Select an active account.", errors: { accountId: ["Account is required"] } };
   let csv; let bytes: Uint8Array;
-  try { bytes = new Uint8Array(await file.arrayBuffer()); csv = parseCsv(decodeCsv(bytes)); }
-  catch (error) { return { message: error instanceof Error ? error.message : "The CSV could not be read." }; }
-  const repository = getImportRepository(); const importId = repository.stage(file.name, createHash("sha256").update(bytes).digest("hex"), accountId, csv);
+  try { bytes = new Uint8Array(await file.arrayBuffer()); csv = extension === "csv" ? parseCsv(decodeCsv(bytes)) : parseSpreadsheet(bytes); }
+  catch (error) { return { message: error instanceof Error ? error.message : "The file could not be read." }; }
+  const repository = getImportRepository(); const importId = repository.stage(file.name, createHash("sha256").update(bytes).digest("hex"), accountId, csv, extension === "csv" ? "csv" : "spreadsheet");
   if (profileId) {
-    const profile = repository.findProfile(profileId); if (!profile || !mappingHeadersValid(profile.configuration, csv.headers)) return { message: "The selected profile does not match this CSV's headers." };
+    const profile = repository.findProfile(profileId); if (!profile || !mappingHeadersValid(profile.configuration, csv.headers)) return { message: "The selected profile does not match this file's headers." };
     repository.prepare(importId, { ...profile.configuration, delimiter: csv.delimiter }, undefined, profile.id); revalidatePath("/imports"); redirect(`/imports/${importId}/preview`);
   }
   redirect(`/imports/${importId}/map`);
@@ -34,7 +36,7 @@ export async function mapImportAction(importId: string, _state: ImportActionStat
   const repository = getImportRepository(); const detail = repository.findById(importId); if (!detail) return { message: "Import not found." };
   const result = mappingSchema.safeParse(mappingFromFormData(formData));
   if (!result.success) return { message: "Check the column mapping.", errors: result.error.flatten().fieldErrors };
-  const headers = Object.keys(detail.rows[0]?.original ?? {}); if (!mappingHeadersValid(result.data, headers)) return { message: "A mapped column is not present in the CSV." };
+  const headers = Object.keys(detail.rows[0]?.original ?? {}); if (!mappingHeadersValid(result.data, headers)) return { message: "A mapped column is not present in the file." };
   const saveProfile = formData.get("saveProfile") === "on"; const profileName = String(formData.get("profileName") ?? "").trim();
   if (saveProfile && !profileName) return { message: "Enter a profile name.", errors: { profileName: ["Profile name is required"] } };
   try { repository.prepare(importId, result.data, saveProfile ? profileName : undefined); }

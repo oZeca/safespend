@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import * as XLSX from "xlsx";
 import { openDatabase } from "@/db/connection";
 import { runMigrations } from "@/db/migrate";
 import { createAccountRepository } from "@/features/accounts/repository";
@@ -10,6 +11,7 @@ import type { CsvMapping } from "./model";
 import { parseLocalizedDate, parseLocalizedMoney } from "./normalization";
 import { createImportRepository } from "./repository";
 import { createCategorizationRepository } from "@/features/categorization/repository";
+import { parseSpreadsheet } from "./spreadsheet";
 
 const directories: string[] = [];
 afterEach(() => { for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }); });
@@ -71,7 +73,71 @@ describe("CSV parsing and normalization", () => {
   });
 });
 
+describe("Excel parsing", () => {
+  function workbookBytes(bookType: "xls" | "xlsx"): Uint8Array {
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ["Date", "Description", "Amount", "Merchant"],
+      ["21/07/2026", "Groceries", "-45,20", "Market"],
+      ["22/07/2026", "Salary", "2000,00", "Employer"],
+    ]), "Transactions");
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ["Date", "Description", "Amount"],
+      ["23/07/2026", "Ignored second sheet", "-10,00"],
+    ]), "Other");
+    return XLSX.write(workbook, { bookType, type: "buffer" }) as Uint8Array;
+  }
+
+  it.each(["xls", "xlsx"] as const)("reads the first worksheet from .%s files", (bookType) => {
+    expect(parseSpreadsheet(workbookBytes(bookType))).toMatchObject({
+      headers: ["Date", "Description", "Amount", "Merchant"],
+      rows: [
+        { Date: "21/07/2026", Description: "Groceries", Amount: "-45,20", Merchant: "Market" },
+        { Date: "22/07/2026", Description: "Salary", Amount: "2000,00", Merchant: "Employer" },
+      ],
+    });
+  });
+
+  it("rejects a first worksheet without data rows", () => {
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([["Date", "Description", "Amount"]]), "Empty");
+    expect(() => parseSpreadsheet(XLSX.write(workbook, { bookType: "xlsx", type: "buffer" }) as Uint8Array)).toThrow("header and at least one data row");
+  });
+
+  it("finds headers after report metadata and preserves worksheet row numbers", () => {
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+      ["ACCOUNT HISTORY", "", "", "", ""],
+      ["Currency:", "EUR", "", "", ""],
+      [],
+      ["Date", "Value date", "Description", "Amount", "Balance"],
+      ["05/08/2026", "05/08/2026", "Transfer", "1,500.00", "1,576.10"],
+    ]), "Report");
+    const parsed = parseSpreadsheet(XLSX.write(workbook, { bookType: "xlsx", type: "buffer" }) as Uint8Array);
+    expect(parsed).toMatchObject({
+      headers: ["Date", "Value date", "Description", "Amount", "Balance"],
+      rowNumbers: [5],
+      rows: [{ Date: "05/08/2026", "Value date": "05/08/2026", Description: "Transfer", Amount: "1,500.00", Balance: "1,576.10" }],
+    });
+  });
+});
+
 describe("CSV import repository", () => {
+  it("stages spreadsheet rows with spreadsheet provenance", () => {
+    const { database, account, repository } = setup();
+    try {
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+        ["Date", "Description", "Amount", "Merchant"],
+        ["21/07/2026", "Groceries", "-45,20", "Market"],
+      ]), "Transactions");
+      const parsed = parseSpreadsheet(XLSX.write(workbook, { bookType: "xlsx", type: "buffer" }) as Uint8Array);
+      const importId = repository.stage("bank.xlsx", "excel-sha", account.id, parsed, "spreadsheet");
+      const preview = repository.prepare(importId, mapping)!;
+      expect(preview.rows[0]).toMatchObject({ date: "2026-07-21", amountCents: -4520, error: null });
+      expect(database.prepare("SELECT import_type FROM imports WHERE id = ?").get(importId)).toEqual({ import_type: "spreadsheet" });
+    } finally { database.close(); }
+  });
   it("previews validation, saves a profile, confirms atomically, and preserves original rows", () => {
     const { database, account, repository } = setup();
     try {

@@ -4,7 +4,7 @@ export type DateFormat = (typeof dateFormats)[number];
 export type DecimalFormat = (typeof decimalFormats)[number];
 
 export interface CsvMapping { dateColumn: string; descriptionColumn: string; amountColumn: string; merchantColumn: string | null; dateFormat: DateFormat; decimalFormat: DecimalFormat; delimiter: string; }
-export interface ParsedCsv { headers: string[]; rows: Record<string, string>[]; delimiter: string; }
+export interface ParsedCsv { headers: string[]; rows: Record<string, string>[]; delimiter: string; rowNumbers?: number[]; }
 export interface NormalizedImportRow { date: string | null; description: string | null; merchant: string | null; amountCents: number | null; fingerprint: string | null; error: string | null; }
 export interface ImportSummary { id: string; fileName: string; status: string; rowCount: number; importedCount: number; skippedCount: number; excludedCount: number; errorCount: number; createdAt: string; accountName: string; profileName: string | null; }
 export interface ImportPreviewRow extends NormalizedImportRow { id: string; rowNumber: number; original: Record<string, string>; isExactDuplicate: boolean; isSelected: boolean | null; matchedRuleId: string | null; matchedRuleName: string | null; suggestedCategoryId: string | null; suggestedCategoryName: string | null; suggestedTransactionType: string | null; }
