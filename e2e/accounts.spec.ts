@@ -17,14 +17,17 @@ test("creates, edits, and archives an account", async ({ page }) => {
   await expect(card.getByText("Saved")).toBeVisible();
   await expect(inlineBalance).toHaveValue("1400.00");
 
-  await card.getByRole("link", { name: "Edit" }).click();
+  await card.getByLabel(`Account actions for ${name}`).click();
+  await card.getByRole("link", { name: "Edit account" }).click();
   await page.getByLabel("Account name").fill(`${name} updated`);
   await page.getByLabel("Current balance").fill("1500.00");
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(page.getByText("Account updated.")).toBeVisible();
 
   page.once("dialog", (dialog) => dialog.accept());
-  await page.getByRole("article").filter({ hasText: `${name} updated` }).getByRole("button", { name: "Archive" }).click();
+  const updatedCard = page.getByRole("article").filter({ hasText: `${name} updated` });
+  await updatedCard.getByLabel(`Account actions for ${name} updated`).click();
+  await updatedCard.getByRole("button", { name: "Archive account" }).click();
   await expect(page.getByText("Account archived.")).toBeVisible();
   await page.getByText(/Archived accounts/).click();
   await expect(page.getByRole("article").filter({ hasText: `${name} updated` })).toBeVisible();
@@ -42,13 +45,13 @@ test("calculates an account balance from its opening balance and transactions", 
   await page.goto("/transactions/new");
   await page.getByRole("combobox", { name: "Account", exact: true }).selectOption({ label: name });
   await page.getByLabel("Description").fill(`Calculated expense ${unique}`);
-  await page.getByLabel("Amount").fill("-100.00");
+  await page.getByRole("textbox", { name: /^Amount\b/ }).fill("-100.00");
   await page.getByRole("button", { name: "Create transaction" }).click();
 
   await page.goto("/transactions/new");
   await page.getByRole("combobox", { name: "Account", exact: true }).selectOption({ label: name });
   await page.getByLabel("Description").fill(`Internal fund movement ${unique}`);
-  await page.getByLabel("Amount").fill("-500.00");
+  await page.getByRole("textbox", { name: /^Amount\b/ }).fill("-500.00");
   await page.getByRole("combobox", { name: "Type", exact: true }).selectOption("transfer");
   await page.getByLabel("Internal movement within this account").check();
   await page.getByRole("button", { name: "Create transaction" }).click();
@@ -56,6 +59,7 @@ test("calculates an account balance from its opening balance and transactions", 
 
   const card = page.getByRole("article").filter({ hasText: name });
   await expect(card.getByText("€900.00", { exact: true })).toBeVisible();
+  await card.getByRole("button", { name: "Show calculation" }).click();
   await expect(card.getByText(/€1,000.00 opening \+ -€100.00 transactions/)).toBeVisible();
   await expect(card.getByRole("textbox", { name: `Current balance for ${name}` })).toHaveCount(0);
 });
