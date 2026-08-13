@@ -67,10 +67,45 @@ describe("dashboard repository", () => {
       expect(result.monthlyTrend[0]).toMatchObject({ month: "2026-01", incomeCents: 200000, expenseCents: 50000, savingsCents: 150000 });
       expect(result.monthlyTrend[6]).toMatchObject({ month: "2026-07", incomeCents: 150000, expenseCents: 50000, savingsCents: 100000, isForecast: false });
       expect(result.monthlyTrend[11]).toMatchObject({ month: "2026-12", incomeCents: 0, expenseCents: 0, savingsCents: 0, isForecast: true });
+      expect(result.monthlyBalances).toHaveLength(7);
+      expect(result.monthlyBalances.slice(0, 6).every((point) => point.balanceCents === null)).toBe(true);
+      expect(result.monthlyBalances[6]).toMatchObject({ month: "2026-07", date: "2026-07-23", balanceCents: 100000, isCurrentMonth: true });
       expect(result.categorySpending).toEqual([
         { categoryId: "category-housing", categoryName: "Housing", spendingCents: 50000, monthlySpending: { "2026-01": 50000 } },
         { categoryId: "category-groceries", categoryName: "Groceries", spendingCents: 30000, monthlySpending: { "2026-07": 30000 } },
         { categoryId: "category-shopping", categoryName: "Shopping", spendingCents: 20000, monthlySpending: { "2026-07": 20000 } }
+      ]);
+    } finally { database.close(); }
+  });
+
+  it("reconstructs each calculated account balance at month end and excludes balance-neutral transactions", () => {
+    const { database, accounts, current, transactions, dashboard } = setup();
+    try {
+      accounts.update(current.id, {
+        name: current.name,
+        institution: current.institution,
+        accountType: current.accountType,
+        currency: current.currency,
+        currentBalanceCents: current.manualBalanceCents,
+        balanceMode: "calculated",
+        openingBalanceCents: 100000,
+        openingBalanceDate: "2026-01-01",
+        includedInAvailableCash: true,
+        includedInNetWorth: true
+      });
+      transactions.create(write(current.id, "2026-01-15", 50000, "income", "category-salary"));
+      transactions.create(write(current.id, "2026-02-10", -20000, "expense", "category-groceries"));
+      transactions.create({ ...write(current.id, "2026-02-11", -30000, "transfer", "category-transfers"), excludedFromAccountBalance: true });
+      transactions.create(write(current.id, "2026-07-30", 999999, "income", "category-salary"));
+
+      expect(dashboard.get("2026-07-23").monthlyBalances).toEqual([
+        { month: "2026-01", label: "Jan", date: "2026-01-31", balanceCents: 150000, isCurrentMonth: false },
+        { month: "2026-02", label: "Feb", date: "2026-02-28", balanceCents: 130000, isCurrentMonth: false },
+        { month: "2026-03", label: "Mar", date: "2026-03-31", balanceCents: 130000, isCurrentMonth: false },
+        { month: "2026-04", label: "Apr", date: "2026-04-30", balanceCents: 130000, isCurrentMonth: false },
+        { month: "2026-05", label: "May", date: "2026-05-31", balanceCents: 130000, isCurrentMonth: false },
+        { month: "2026-06", label: "Jun", date: "2026-06-30", balanceCents: 130000, isCurrentMonth: false },
+        { month: "2026-07", label: "Jul", date: "2026-07-23", balanceCents: 130000, isCurrentMonth: true }
       ]);
     } finally { database.close(); }
   });

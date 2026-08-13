@@ -20,6 +20,14 @@ export interface DashboardMonthlyPoint {
   isForecast: boolean;
 }
 
+export interface DashboardMonthlyBalancePoint {
+  month: string;
+  label: string;
+  date: string;
+  balanceCents: number | null;
+  isCurrentMonth: boolean;
+}
+
 export interface DashboardCategorySpending {
   categoryId: string | null;
   categoryName: string;
@@ -41,6 +49,7 @@ export interface DashboardData {
   currentMonthTotals: { incomeCents: number; expenseCents: number; savingsCents: number };
   yearToDateSavingsCents: number;
   monthlyTrend: DashboardMonthlyPoint[];
+  monthlyBalances: DashboardMonthlyBalancePoint[];
   categorySpending: DashboardCategorySpending[];
   uncategorizedSpendingCents: number;
 }
