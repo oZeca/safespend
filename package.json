@@ -16,6 +16,7 @@
     "db:seed:demo": "node --import tsx src/db/cli/seed.ts --demo"
   },
   "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.23",
     "@radix-ui/react-slot": "^1.2.3",
     "better-sqlite3": "^12.4.1",
     "class-variance-authority": "^0.7.1",
