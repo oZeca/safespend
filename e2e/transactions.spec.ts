@@ -1,5 +1,24 @@
 import { expect, test } from "@playwright/test";
 
+test("applies quick transaction date ranges", async ({ page }) => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth();
+  const dateString = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
+  await page.goto("/transactions?type=expense&page=2");
+  await page.getByRole("link", { name: "This month", exact: true }).click();
+  await expect(page.getByLabel("From", { exact: true })).toHaveValue(dateString(new Date(year, month, 1)));
+  await expect(page.getByLabel("To", { exact: true })).toHaveValue(dateString(new Date(year, month + 1, 0)));
+  await expect(page).toHaveURL(/type=expense/);
+  await expect(page).not.toHaveURL(/page=2/);
+
+  await page.getByRole("link", { name: "All time", exact: true }).click();
+  await expect(page.getByLabel("From", { exact: true })).toHaveValue("");
+  await expect(page.getByLabel("To", { exact: true })).toHaveValue("");
+  await expect(page).toHaveURL(/type=expense/);
+});
+
 test("creates, edits, filters, and deletes a transaction", async ({ page }) => {
   const unique = Date.now(); const accountName = `Transaction account ${unique}`; const description = `Market purchase ${unique}`;
   await page.goto("/accounts/new");

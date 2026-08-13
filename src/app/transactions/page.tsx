@@ -8,7 +8,7 @@ import { InlineCategorySelect } from "@/features/transactions/inline-category-se
 import { orphanedAccountFilter, transactionDateSorts, transactionTypeLabels, type TransactionFilters } from "@/features/transactions/model";
 import { getTransactionRepository } from "@/features/transactions/server-repository";
 import { isAmountComparison, isTransactionType, parseTransactionFilterAmount } from "@/features/transactions/validation";
-import { localMonthString } from "@/lib/dates";
+import { localMonthString, transactionDateRangePresets } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 type Params = { search?: string; account?: string; category?: string; type?: string; from?: string; to?: string; amountComparison?: string; amount?: string; sort?: string; page?: string; month?: string; status?: string; suggest?: string };
@@ -17,6 +17,7 @@ function validDate(value?: string) { if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(v
 function validMonth(value?: string) { return value && /^\d{4}-(0[1-9]|1[0-2])$/.test(value) ? value : localMonthString(); }
 function pageHref(params: Params, page: number) { const query = new URLSearchParams(); for (const [key, value] of Object.entries(params)) if (value && key !== "status" && key !== "page") query.set(key, value); query.set("page", String(page)); return `/transactions?${query}`; }
 function returnQuery(params: Params) { const query = new URLSearchParams(); for (const [key, value] of Object.entries(params)) if (value && key !== "status" && key !== "suggest") query.set(key, value); return query.toString(); }
+function datePresetHref(params: Params, from?: string, to?: string) { const query = new URLSearchParams(); for (const [key, value] of Object.entries(params)) if (value && !["from", "to", "page", "status", "suggest"].includes(key)) query.set(key, value); if (from) query.set("from", from); if (to) query.set("to", to); const value = query.toString(); return value ? `/transactions?${value}` : "/transactions"; }
 
 export default async function TransactionsPage({ searchParams }: { searchParams: Promise<Params> }) {
   const params = await searchParams; const repository = getTransactionRepository(); const options = repository.listOptions();
@@ -31,6 +32,7 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
     dateFrom: validDate(params.from), dateTo: validDate(params.to), amountComparison: isAmountComparison(params.amountComparison) ? params.amountComparison : undefined,
     amountCents, dateSort, page: Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1, pageSize: 20 };
   const result = repository.list(filters); const month = validMonth(params.month); const totals = repository.monthlyTotals(month);
+  const datePresets = transactionDateRangePresets();
   return <section className="mx-auto max-w-6xl space-y-7">
     <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-sm font-medium text-primary">Transactions</p><h1 className="text-3xl font-semibold tracking-tight">Money in and out</h1><p className="mt-2 text-sm text-muted-foreground">Search, categorize, and review manual transactions.</p></div><Button asChild><Link href="/transactions/new"><Plus className="mr-2 h-4 w-4" />Add transaction</Link></Button></div>
     {params.status && statuses[params.status] && <div className={`rounded-md border p-3 text-sm ${params.status === "delete-error" ? "border-red-200 bg-red-50 text-red-800" : "border-emerald-200 bg-emerald-50 text-emerald-900"}`} role="status">{statuses[params.status]}</div>}
@@ -40,6 +42,12 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
       <label><span className="sr-only">Account</span><select className="h-10 w-full rounded-md border bg-background px-3 text-sm" defaultValue={params.account ?? ""} name="account"><option value="">All accounts</option><option value={orphanedAccountFilter}>Orphaned (no account)</option>{options.accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></label>
       <label><span className="sr-only">Category</span><select className="h-10 w-full rounded-md border bg-background px-3 text-sm" defaultValue={params.category ?? ""} name="category"><option value="">All categories</option><option value="uncategorized">Uncategorized</option>{options.categories.filter((category) => category.name !== "Uncategorized").map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
       <label><span className="sr-only">Transaction type</span><select className="h-10 w-full rounded-md border bg-background px-3 text-sm" defaultValue={params.type ?? ""} name="type"><option value="">All types</option><option value="actual">Income, expenses, and refunds</option><option value="spending">Expenses and refunds</option>{Object.entries(transactionTypeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+      <div className="space-y-2 sm:col-span-2 lg:col-span-4">
+        <span className="text-sm font-medium">Date range</span>
+        <nav aria-label="Quick date ranges" className="flex flex-wrap gap-2">
+          {datePresets.map((preset) => { const active = filters.dateFrom === preset.from && filters.dateTo === preset.to; return <Button asChild key={preset.id} size="sm" variant={active ? "default" : "outline"}><Link aria-current={active ? "true" : undefined} href={datePresetHref(params, preset.from, preset.to)}>{preset.label}</Link></Button>; })}
+        </nav>
+      </div>
       <label className="flex items-center gap-2 text-sm"><span>From</span><input className="h-10 min-w-0 flex-1 rounded-md border bg-background px-2" defaultValue={params.from} name="from" type="date" /></label>
       <label className="flex items-center gap-2 text-sm"><span>To</span><input className="h-10 min-w-0 flex-1 rounded-md border bg-background px-2" defaultValue={params.to} name="to" type="date" /></label>
       <label><span className="sr-only">Amount comparison</span><select className="h-10 w-full rounded-md border bg-background px-3 text-sm" defaultValue={params.amountComparison ?? "equal"} name="amountComparison"><option value="equal">Amount equals</option><option value="more">Amount more than</option><option value="less">Amount less than</option></select></label>
