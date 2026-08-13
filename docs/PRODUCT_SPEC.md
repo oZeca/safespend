@@ -34,7 +34,7 @@ The user can:
 Show:
 
 - Total available cash
-- Available cash at each completed month-end, with the current month shown as of today
+- Available cash, investment balances, and their combined total at each completed month-end, with the current month shown as of today
 - Current-month income, expenses, and savings
 - Year-to-date savings
 - Annual target progress

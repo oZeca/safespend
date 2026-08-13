@@ -16,7 +16,7 @@ export function createDashboardRepository(database: Database.Database) {
         COALESCE(SUM(CASE WHEN a.included_in_available_cash = 1 THEN 1 ELSE 0 END), 0) AS includedAccountCount,
         COUNT(*) AS activeAccountCount FROM accounts a WHERE a.is_archived = 0`).get() as
         { availableCashCents: number; includedAccountCount: number; activeAccountCount: number };
-      const balanceAtDate = database.prepare(`SELECT COUNT(*) AS accountCount, COUNT(balance_cents) AS knownBalanceCount,
+      const balanceAtDateSql = (accountFilter: string) => `SELECT COUNT(*) AS accountCount, COUNT(balance_cents) AS knownBalanceCount,
         COALESCE(SUM(balance_cents), 0) AS balanceCents FROM (
           SELECT CASE
             WHEN a.balance_mode = 'calculated' AND a.opening_balance_date <= @date THEN
@@ -26,8 +26,10 @@ export function createDashboardRepository(database: Database.Database) {
             WHEN a.balance_mode = 'manual' THEN (SELECT s.balance_cents FROM balance_snapshots s
               WHERE s.account_id = a.id AND s.date <= @date ORDER BY s.date DESC, s.created_at DESC LIMIT 1)
             ELSE NULL END AS balance_cents
-          FROM accounts a WHERE a.is_archived = 0 AND a.included_in_available_cash = 1
-        )`);
+          FROM accounts a WHERE a.is_archived = 0 AND ${accountFilter}
+        )`;
+      const availableCashAtDate = database.prepare(balanceAtDateSql("a.included_in_available_cash = 1"));
+      const investmentsAtDate = database.prepare(balanceAtDateSql("a.account_type = 'investment' AND a.included_in_net_worth = 1"));
       const monthlyBalances: DashboardMonthlyBalancePoint[] = [];
       for (let monthNumber = 1; monthNumber <= Number(currentMonth.slice(5, 7)); monthNumber += 1) {
         const month = `${asOf.slice(0, 4)}-${String(monthNumber).padStart(2, "0")}`;
@@ -35,12 +37,17 @@ export function createDashboardRepository(database: Database.Database) {
         const monthEndDate = new Date(`${followingMonth}-01T00:00:00.000Z`);
         monthEndDate.setUTCDate(monthEndDate.getUTCDate() - 1);
         const date = month === currentMonth ? asOf : monthEndDate.toISOString().slice(0, 10);
-        const balance = balanceAtDate.get({ date }) as { accountCount: number; knownBalanceCount: number; balanceCents: number };
+        const cash = availableCashAtDate.get({ date }) as { accountCount: number; knownBalanceCount: number; balanceCents: number };
+        const investments = investmentsAtDate.get({ date }) as { accountCount: number; knownBalanceCount: number; balanceCents: number };
+        const availableCashCents = cash.accountCount === cash.knownBalanceCount ? cash.balanceCents : null;
+        const investmentBalanceCents = investments.accountCount === investments.knownBalanceCount ? investments.balanceCents : null;
         monthlyBalances.push({
           month,
           label: new Intl.DateTimeFormat("en", { month: "short", timeZone: "UTC" }).format(new Date(`${month}-01T00:00:00.000Z`)),
           date,
-          balanceCents: balance.accountCount > 0 && balance.knownBalanceCount === balance.accountCount ? balance.balanceCents : null,
+          availableCashCents,
+          investmentBalanceCents,
+          totalBalanceCents: availableCashCents === null || investmentBalanceCents === null ? null : availableCashCents + investmentBalanceCents,
           isCurrentMonth: month === currentMonth
         });
       }

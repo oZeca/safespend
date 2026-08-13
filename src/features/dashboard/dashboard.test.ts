@@ -68,8 +68,8 @@ describe("dashboard repository", () => {
       expect(result.monthlyTrend[6]).toMatchObject({ month: "2026-07", incomeCents: 150000, expenseCents: 50000, savingsCents: 100000, isForecast: false });
       expect(result.monthlyTrend[11]).toMatchObject({ month: "2026-12", incomeCents: 0, expenseCents: 0, savingsCents: 0, isForecast: true });
       expect(result.monthlyBalances).toHaveLength(7);
-      expect(result.monthlyBalances.slice(0, 6).every((point) => point.balanceCents === null)).toBe(true);
-      expect(result.monthlyBalances[6]).toMatchObject({ month: "2026-07", date: "2026-07-23", balanceCents: 100000, isCurrentMonth: true });
+      expect(result.monthlyBalances.slice(0, 6).every((point) => point.availableCashCents === null && point.totalBalanceCents === null)).toBe(true);
+      expect(result.monthlyBalances[6]).toMatchObject({ month: "2026-07", date: "2026-07-23", availableCashCents: 100000, investmentBalanceCents: 0, totalBalanceCents: 100000, isCurrentMonth: true });
       expect(result.categorySpending).toEqual([
         { categoryId: "category-housing", categoryName: "Housing", spendingCents: 50000, monthlySpending: { "2026-01": 50000 } },
         { categoryId: "category-groceries", categoryName: "Groceries", spendingCents: 30000, monthlySpending: { "2026-07": 30000 } },
@@ -99,14 +99,38 @@ describe("dashboard repository", () => {
       transactions.create(write(current.id, "2026-07-30", 999999, "income", "category-salary"));
 
       expect(dashboard.get("2026-07-23").monthlyBalances).toEqual([
-        { month: "2026-01", label: "Jan", date: "2026-01-31", balanceCents: 150000, isCurrentMonth: false },
-        { month: "2026-02", label: "Feb", date: "2026-02-28", balanceCents: 130000, isCurrentMonth: false },
-        { month: "2026-03", label: "Mar", date: "2026-03-31", balanceCents: 130000, isCurrentMonth: false },
-        { month: "2026-04", label: "Apr", date: "2026-04-30", balanceCents: 130000, isCurrentMonth: false },
-        { month: "2026-05", label: "May", date: "2026-05-31", balanceCents: 130000, isCurrentMonth: false },
-        { month: "2026-06", label: "Jun", date: "2026-06-30", balanceCents: 130000, isCurrentMonth: false },
-        { month: "2026-07", label: "Jul", date: "2026-07-23", balanceCents: 130000, isCurrentMonth: true }
+        { month: "2026-01", label: "Jan", date: "2026-01-31", availableCashCents: 150000, investmentBalanceCents: 0, totalBalanceCents: 150000, isCurrentMonth: false },
+        { month: "2026-02", label: "Feb", date: "2026-02-28", availableCashCents: 130000, investmentBalanceCents: 0, totalBalanceCents: 130000, isCurrentMonth: false },
+        { month: "2026-03", label: "Mar", date: "2026-03-31", availableCashCents: 130000, investmentBalanceCents: 0, totalBalanceCents: 130000, isCurrentMonth: false },
+        { month: "2026-04", label: "Apr", date: "2026-04-30", availableCashCents: 130000, investmentBalanceCents: 0, totalBalanceCents: 130000, isCurrentMonth: false },
+        { month: "2026-05", label: "May", date: "2026-05-31", availableCashCents: 130000, investmentBalanceCents: 0, totalBalanceCents: 130000, isCurrentMonth: false },
+        { month: "2026-06", label: "Jun", date: "2026-06-30", availableCashCents: 130000, investmentBalanceCents: 0, totalBalanceCents: 130000, isCurrentMonth: false },
+        { month: "2026-07", label: "Jul", date: "2026-07-23", availableCashCents: 130000, investmentBalanceCents: 0, totalBalanceCents: 130000, isCurrentMonth: true }
       ]);
+    } finally { database.close(); }
+  });
+
+  it("shows investment balances separately and adds them to the total balance", () => {
+    const { database, accounts, transactions, dashboard } = setup();
+    try {
+      const investment = accounts.create({
+        name: "Investments",
+        institution: null,
+        accountType: "investment",
+        currency: "EUR",
+        currentBalanceCents: 0,
+        balanceMode: "calculated",
+        openingBalanceCents: 50000,
+        openingBalanceDate: "2026-01-01",
+        includedInAvailableCash: false,
+        includedInNetWorth: true
+      });
+      transactions.create(write(investment.id, "2026-02-15", 10000, "transfer", "category-investments"));
+
+      const balances = dashboard.get("2026-07-23").monthlyBalances;
+      expect(balances[0]).toMatchObject({ availableCashCents: null, investmentBalanceCents: 50000, totalBalanceCents: null });
+      expect(balances[1]).toMatchObject({ availableCashCents: null, investmentBalanceCents: 60000, totalBalanceCents: null });
+      expect(balances[6]).toMatchObject({ availableCashCents: 100000, investmentBalanceCents: 60000, totalBalanceCents: 160000 });
     } finally { database.close(); }
   });
 

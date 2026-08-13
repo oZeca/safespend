@@ -24,7 +24,9 @@ export interface DashboardMonthlyBalancePoint {
   month: string;
   label: string;
   date: string;
-  balanceCents: number | null;
+  availableCashCents: number | null;
+  investmentBalanceCents: number | null;
+  totalBalanceCents: number | null;
   isCurrentMonth: boolean;
 }
 
