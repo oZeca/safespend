@@ -5,10 +5,11 @@ import { redirect } from "next/navigation";
 import { parseMoneyToCents } from "@/features/accounts/validation";
 import type { TransactionWrite } from "./repository";
 import { getTransactionRepository } from "./server-repository";
-import { transactionInputFromFormData, transactionInputSchema, type TransactionInput } from "./validation";
+import { isTransactionType, transactionInputFromFormData, transactionInputSchema, type TransactionInput } from "./validation";
 
 export interface TransactionFormState { message?: string; errors?: Record<string, string[]>; values?: Record<string, string>; }
 export interface InlineCategoryState { saved?: boolean; error?: string; }
+export type InlineTransactionState = InlineCategoryState;
 
 function valuesFromFormData(formData: FormData): Record<string, string> {
   return Object.fromEntries(["accountId", "date", "description", "merchant", "amount", "transactionType", "categoryId", "notes", "isRecurring", "isExceptional", "excludedFromForecastBaseline", "excludedFromAccountBalance"].map((key) => [key, String(formData.get(key) ?? "")]));
@@ -72,5 +73,43 @@ export async function updateTransactionCategoryAction(id: string, formData: Form
   revalidatePath("/transactions");
   revalidatePath(`/transactions/${id}/edit`);
   revalidatePath("/dashboard");
+  return { saved: true };
+}
+
+function refreshInlineTransaction(id: string) {
+  revalidatePath("/transactions");
+  revalidatePath(`/transactions/${id}/edit`);
+  revalidatePath("/accounts");
+  revalidatePath("/dashboard");
+}
+
+export async function updateTransactionTypeAction(id: string, formData: FormData): Promise<InlineTransactionState> {
+  const value = formData.get("transactionType");
+  if (typeof value !== "string" || !isTransactionType(value)) return { error: "Invalid type." };
+  const repository = getTransactionRepository();
+  const transaction = repository.findById(id);
+  if (!transaction) return { error: "Transaction not found." };
+  if (value === "expense" && transaction.amountCents > 0) return { error: "Expenses require a negative amount." };
+  if ((value === "income" || value === "refund") && transaction.amountCents < 0) return { error: `${value === "income" ? "Income" : "Refunds"} require a positive amount.` };
+  try {
+    if (!repository.updateTransactionType(id, value)) return { error: "Transaction not found." };
+  } catch (error) {
+    console.error("Failed to update transaction type", error);
+    return { error: error instanceof Error ? error.message : "Could not save type." };
+  }
+  refreshInlineTransaction(id);
+  return { saved: true };
+}
+
+export async function updateTransactionAccountBalanceAction(id: string, formData: FormData): Promise<InlineTransactionState> {
+  const value = formData.get("excludedFromAccountBalance");
+  if (value !== "true" && value !== "false") return { error: "Invalid balance treatment." };
+  try {
+    if (!getTransactionRepository().updateAccountBalanceTreatment(id, value === "true")) return { error: "Transaction not found." };
+  } catch (error) {
+    console.error("Failed to update transaction balance treatment", error);
+    return { error: "Could not save balance treatment." };
+  }
+  refreshInlineTransaction(id);
   return { saved: true };
 }

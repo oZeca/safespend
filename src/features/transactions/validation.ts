@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { parseMoneyToCents } from "@/features/accounts/validation";
-import { amountComparisons, transactionTypes, type AmountComparison, type TransactionType } from "./model";
+import { accountBalanceTreatments, amountComparisons, transactionTypes, type AccountBalanceTreatment, type AmountComparison, type TransactionType } from "./model";
 
 export function normalizeDescription(value: string): string { return value.trim().replace(/\s+/g, " ").toLocaleLowerCase("en"); }
 
@@ -32,6 +32,7 @@ export function transactionInputFromFormData(formData: FormData): Record<string,
 
 export function isTransactionType(value: string | undefined): value is TransactionType { return transactionTypes.includes(value as TransactionType); }
 export function isAmountComparison(value: string | undefined): value is AmountComparison { return amountComparisons.includes(value as AmountComparison); }
+export function isAccountBalanceTreatment(value: string | undefined): value is AccountBalanceTreatment { return accountBalanceTreatments.includes(value as AccountBalanceTreatment); }
 
 export function parseTransactionFilterAmount(value: string | undefined): number | undefined {
   if (!value?.trim()) return undefined;

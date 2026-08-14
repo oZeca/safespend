@@ -34,6 +34,10 @@ describe("transaction repository", () => {
       expect(repository.monthlyTotals("2026-07")).toEqual({ month: "2026-07", incomeCents: 0, expenseCents: 0, savingsCents: 0 });
       expect(repository.updateCategory(created.id, "category-shopping")).toMatchObject({ categoryId: "category-shopping", transactionType: "expense" });
       expect(repository.updateCategory(created.id, null)).toMatchObject({ categoryId: null, categoryName: null });
+      expect(repository.updateTransactionType(created.id, "transfer")).toMatchObject({ transactionType: "transfer" });
+      expect(repository.updateTransactionType(created.id, "expense")).toMatchObject({ transactionType: "expense" });
+      expect(repository.updateAccountBalanceTreatment(created.id, true)).toMatchObject({ excludedFromAccountBalance: true });
+      expect(repository.updateAccountBalanceTreatment(created.id, false)).toMatchObject({ excludedFromAccountBalance: false });
       expect(repository.softDelete(created.id)).toBe(true);
       expect(repository.softDelete(created.id)).toBe(false);
       expect(repository.findById(created.id)).toBeNull();
@@ -42,7 +46,7 @@ describe("transaction repository", () => {
       expect(stored.is_deleted).toBe(1);
       database.prepare("UPDATE accounts SET is_archived = 1 WHERE id = ?").run(account.id);
       expect(repository.listOptions().accounts).toEqual([]);
-      expect(repository.listOptions(account.id).accounts).toEqual([{ id: account.id, name: "Main", currency: "EUR" }]);
+      expect(repository.listOptions(account.id).accounts).toEqual([{ id: account.id, name: "Main", currency: "EUR", accountType: "current" }]);
     } finally { database.close(); }
   });
 
@@ -72,6 +76,17 @@ describe("transaction repository", () => {
       expect(repository.list({ amountComparison: "equal", amountCents: -5000, page: 1, pageSize: 20 }).items.map((item) => item.description)).toEqual(["Exact expense"]);
       expect(repository.list({ amountComparison: "more", amountCents: -5000, page: 1, pageSize: 20 }).items.map((item) => item.description)).toEqual(["Income", "Small expense"]);
       expect(repository.list({ amountComparison: "less", amountCents: -5000, page: 1, pageSize: 20 }).items.map((item) => item.description)).toEqual(["Large expense"]);
+    } finally { database.close(); }
+  });
+
+  it("filters internal account movements and balance-included transactions", () => {
+    const { database, repository, account } = setup();
+    try {
+      repository.create({ ...base(account.id), description: "Regular purchase" });
+      repository.create({ ...base(account.id), description: "Pocket movement", transactionType: "transfer", categoryId: "category-transfers", excludedFromAccountBalance: true });
+
+      expect(repository.list({ accountBalanceTreatment: "internal", page: 1, pageSize: 20 }).items.map((item) => item.description)).toEqual(["Pocket movement"]);
+      expect(repository.list({ accountBalanceTreatment: "included", page: 1, pageSize: 20 }).items.map((item) => item.description)).toEqual(["Regular purchase"]);
     } finally { database.close(); }
   });
 

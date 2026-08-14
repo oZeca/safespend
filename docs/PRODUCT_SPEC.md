@@ -53,9 +53,10 @@ Safe to spend is the main visual priority.
 - Paginated list
 - First/last page shortcuts and date sorting from newest to oldest or oldest to newest
 - Search by description or merchant
-- Filter by date, account (including orphaned transactions with no active account), category, type, and signed amount (equal to, more than, or less than)
+- Filter by date, account (including orphaned transactions with no active account), category, type, account-balance treatment (including internal movements within an account), and signed amount (equal to, more than, or less than)
 - Edit category and type
 - Change a transaction's category directly from the list, saving each selection immediately
+- Change a transaction's type and internal account-movement treatment directly from the list, saving each control immediately
 - Split across categories
 - Mark recurring or transfer
 - Selecting a transfer-kind category automatically sets and locks the transaction type to transfer so it is excluded consistently from income and expense totals.

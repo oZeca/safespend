@@ -1,11 +1,12 @@
 import type Database from "better-sqlite3";
 import { randomUUID } from "node:crypto";
+import type { AccountType } from "@/features/accounts/model";
 import { calculateMonthlyTotals } from "./totals";
 import { orphanedAccountFilter, type AccountOption, type CategoryOption, type Transaction, type TransactionFilters, type TransactionPage, type TransactionType } from "./model";
 import { normalizeDescription } from "./validation";
 
 interface TransactionRow {
-  id: string; accountId: string; accountName: string; date: string; description: string; normalizedDescription: string; merchant: string | null;
+  id: string; accountId: string; accountName: string; accountType: AccountType | null; date: string; description: string; normalizedDescription: string; merchant: string | null;
   amountCents: number; transactionType: TransactionType; categoryId: string | null; categoryName: string | null; notes: string | null; splitCount: number;
   isRecurring: number; isExceptional: number; excludedFromForecastBaseline: number; excludedFromAccountBalance: number; createdAt: string; updatedAt: string;
 }
@@ -15,7 +16,7 @@ export interface TransactionWrite {
 }
 export interface TransactionRepositoryOptions { now?: () => Date; id?: () => string; }
 
-const select = `SELECT t.id, COALESCE(t.account_id, '') AS accountId, COALESCE(a.name, 'Orphaned account') AS accountName, t.date, t.description, t.normalized_description AS normalizedDescription, t.merchant,
+const select = `SELECT t.id, COALESCE(t.account_id, '') AS accountId, COALESCE(a.name, 'Orphaned account') AS accountName, a.account_type AS accountType, t.date, t.description, t.normalized_description AS normalizedDescription, t.merchant,
   t.amount_cents AS amountCents, t.transaction_type AS transactionType, t.category_id AS categoryId, c.name AS categoryName, t.notes,
   (SELECT COUNT(*) FROM transaction_splits ts WHERE ts.transaction_id = t.id) AS splitCount, t.is_recurring AS isRecurring, t.is_exceptional AS isExceptional,
   t.excluded_from_forecast_baseline AS excludedFromForecastBaseline, t.excluded_from_account_balance AS excludedFromAccountBalance, t.created_at AS createdAt, t.updated_at AS updatedAt
@@ -31,8 +32,8 @@ export function createTransactionRepository(database: Database.Database, options
   return {
     listOptions(includeAccountId?: string): { accounts: AccountOption[]; categories: CategoryOption[] } {
       const accounts = includeAccountId
-        ? database.prepare("SELECT id, name, currency FROM accounts WHERE is_archived = 0 OR id = ? ORDER BY name COLLATE NOCASE").all(includeAccountId) as AccountOption[]
-        : database.prepare("SELECT id, name, currency FROM accounts WHERE is_archived = 0 ORDER BY name COLLATE NOCASE").all() as AccountOption[];
+        ? database.prepare("SELECT id, name, currency, account_type AS accountType FROM accounts WHERE is_archived = 0 OR id = ? ORDER BY name COLLATE NOCASE").all(includeAccountId) as AccountOption[]
+        : database.prepare("SELECT id, name, currency, account_type AS accountType FROM accounts WHERE is_archived = 0 ORDER BY name COLLATE NOCASE").all() as AccountOption[];
       const categories = database.prepare("SELECT id, name, kind FROM categories WHERE is_archived = 0 ORDER BY name COLLATE NOCASE").all() as CategoryOption[];
       return { accounts, categories };
     },
@@ -53,6 +54,8 @@ export function createTransactionRepository(database: Database.Database, options
       if (filters.transactionType) { where.push("t.transaction_type = @transactionType"); parameters.transactionType = filters.transactionType; }
       if (filters.flow === "spending") where.push("t.transaction_type IN ('expense', 'refund')");
       if (filters.flow === "actual") where.push("t.transaction_type IN ('income', 'expense', 'refund')");
+      if (filters.accountBalanceTreatment === "internal") where.push("t.excluded_from_account_balance = 1");
+      if (filters.accountBalanceTreatment === "included") where.push("t.excluded_from_account_balance = 0");
       if (filters.dateFrom) { where.push("t.date >= @dateFrom"); parameters.dateFrom = filters.dateFrom; }
       if (filters.dateTo) { where.push("t.date <= @dateTo"); parameters.dateTo = filters.dateTo; }
       if (filters.amountComparison && filters.amountCents !== undefined) {
@@ -112,6 +115,25 @@ export function createTransactionRepository(database: Database.Database, options
           : existing.transactionType;
       const result = database.prepare("UPDATE transactions SET category_id = ?, transaction_type = ?, updated_at = ? WHERE id = ? AND is_deleted = 0")
         .run(categoryId, transactionType, now().toISOString(), id);
+      return result.changes ? this.findById(id) : null;
+    },
+    updateTransactionType(id: string, transactionType: TransactionType): Transaction | null {
+      const existing = this.findById(id);
+      if (!existing) return null;
+      if (existing.splitCount > 0 && transactionType === "transfer") throw new Error("Remove the transaction splits before marking it as a transfer.");
+      const linked = database.prepare("SELECT 1 FROM transfer_links WHERE source_transaction_id = ? OR destination_transaction_id = ?").get(id, id);
+      if (linked && transactionType !== "transfer") throw new Error("Unlink this transfer before changing its type.");
+      const category = existing.categoryId
+        ? database.prepare("SELECT kind FROM categories WHERE id = ?").get(existing.categoryId) as { kind: CategoryOption["kind"] } | undefined
+        : undefined;
+      if (category?.kind === "transfer" && transactionType !== "transfer") throw new Error("Transfer categories must use the transfer type.");
+      const result = database.prepare("UPDATE transactions SET transaction_type = ?, updated_at = ? WHERE id = ? AND is_deleted = 0")
+        .run(transactionType, now().toISOString(), id);
+      return result.changes ? this.findById(id) : null;
+    },
+    updateAccountBalanceTreatment(id: string, excludedFromAccountBalance: boolean): Transaction | null {
+      const result = database.prepare("UPDATE transactions SET excluded_from_account_balance = ?, updated_at = ? WHERE id = ? AND is_deleted = 0")
+        .run(Number(excludedFromAccountBalance), now().toISOString(), id);
       return result.changes ? this.findById(id) : null;
     },
     softDelete(id: string): boolean {

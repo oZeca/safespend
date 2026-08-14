@@ -1,9 +1,7 @@
 import {
-  Banknote,
   Building2,
   ChartNoAxesCombined,
   CircleDollarSign,
-  CreditCard,
   Landmark,
   MoreHorizontal,
   PiggyBank,
@@ -21,6 +19,7 @@ import {
 import { AccountOrderSelect } from "@/features/accounts/account-order-select";
 import { ArchiveButton } from "@/features/accounts/archive-button";
 import { InlineBalanceInput } from "@/features/accounts/inline-balance-input";
+import { AccountTypeIcon } from "@/features/accounts/account-type-icon";
 import { formatCurrency } from "@/features/accounts/money";
 import {
   accountTypeLabels,
@@ -28,6 +27,7 @@ import {
   type Account,
   type AccountType,
 } from "@/features/accounts/model";
+import { accountTypeAccentClasses } from "@/features/accounts/presentation";
 import { getAccountRepository } from "@/features/accounts/server-repository";
 import { calculateAccountSummary } from "@/features/accounts/summary";
 import { cn } from "@/lib/utils";
@@ -57,39 +57,27 @@ function orderAccounts(accounts: Account[], order: AccountOrder) {
 const accountTypePresentation: Record<
   AccountType,
   {
-    Icon: ComponentType<{ className?: string }>;
-    accent: string;
     icon: string;
     eyebrow: string;
   }
 > = {
   current: {
-    Icon: WalletCards,
-    accent: "bg-sky-400",
     icon: "text-sky-600",
     eyebrow: "Everyday money",
   },
   savings: {
-    Icon: PiggyBank,
-    accent: "bg-emerald-400",
     icon: "text-emerald-600",
     eyebrow: "Savings",
   },
   cash: {
-    Icon: Banknote,
-    accent: "bg-amber-400",
     icon: "text-amber-600",
     eyebrow: "Cash on hand",
   },
   credit: {
-    Icon: CreditCard,
-    accent: "bg-violet-400",
     icon: "text-violet-600",
     eyebrow: "Credit",
   },
   investment: {
-    Icon: ChartNoAxesCombined,
-    accent: "bg-rose-400",
     icon: "text-rose-600",
     eyebrow: "Long term",
   },
@@ -105,7 +93,6 @@ function InclusionBadge({ children }: { children: React.ReactNode }) {
 
 function AccountCard({ account }: { account: Account }) {
   const presentation = accountTypePresentation[account.accountType];
-  const { Icon } = presentation;
   const transactionsHref = `/transactions?account=${encodeURIComponent(account.id)}`;
 
   return (
@@ -118,16 +105,16 @@ function AccountCard({ account }: { account: Account }) {
       <span
         className={cn(
           "absolute left-4 top-0 h-1 w-10 -translate-y-1/2 rounded-full",
-          presentation.accent,
+          accountTypeAccentClasses[account.accountType],
         )}
         aria-hidden="true"
       />
-      <Icon
+      <AccountTypeIcon
+        accountType={account.accountType}
         className={cn(
           "pointer-events-none absolute bottom-10 right-4 h-10 w-10 opacity-25",
           presentation.icon,
         )}
-        aria-hidden="true"
       />
       <div className="min-w-0 pr-9">
         <div className="flex min-w-0 items-center justify-start gap-2">
