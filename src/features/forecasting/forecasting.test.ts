@@ -6,7 +6,7 @@ import { openDatabase } from "@/db/connection";
 import { runMigrations } from "@/db/migrate";
 import { createAccountRepository } from "@/features/accounts/repository";
 import { createTransactionRepository, type TransactionWrite } from "@/features/transactions/repository";
-import { calculateForecast, expandRecurringItems } from "./engine";
+import { calculateForecast, calculateMonthlyAssumptions, calculateYearOutlook, expandRecurringItems } from "./engine";
 import type { SavingsGoal } from "./model";
 import { createForecastRepository } from "./repository";
 import { goalInputSchema, recurringInputSchema } from "./validation";
@@ -31,6 +31,23 @@ function engineInput(availableCashCents: number) {
 }
 
 describe("forecast engine", () => {
+  it("projects remaining spending and year-end net worth without assuming investment growth", () => {
+    const input = engineInput(500000);
+    const outlook = calculateYearOutlook("2026-07-23", 1000000, {
+      goal,
+      minimumCashBufferCents: input.minimumCashBufferCents,
+      includeProjectedVariableExpenses: true,
+      incomeExpectations: input.incomeExpectations,
+      plannedExpenses: input.plannedExpenses,
+      recurringItems: input.recurringItems
+    }, 31000);
+    expect(outlook.remainingMonthCount).toBe(6);
+    expect(outlook.monthlyForecast).toHaveLength(5);
+    expect(outlook.projectedRemainingSpendingCents).toBeGreaterThan(0);
+    expect(outlook.projectedYearEndNetWorthCents).toBe(outlook.currentNetWorthCents + outlook.projectedNetWorthChangeCents);
+    expect(outlook.projectedAverageMonthlySpendingCents).toBe(Math.trunc(outlook.projectedRemainingSpendingCents / 6));
+  });
+
   it("returns positive, zero, and negative safe-to-spend outcomes without hiding negatives", () => {
     const positive = calculateForecast(engineInput(500000));
     expect(positive).toMatchObject({
@@ -51,6 +68,21 @@ describe("forecast engine", () => {
       id: "month-end", name: "Month end", transactionType: "expense", expectedAmountCents: -1000,
       frequency: "monthly", nextExpectedDate: "2026-01-31", endDate: "2026-04-30"
     }], "2026-01-01", "2026-12-31").map((item) => item.date)).toEqual(["2026-01-31", "2026-02-28", "2026-03-31", "2026-04-30"]);
+  });
+
+  it("groups future one-time and recurring assumptions by month without mixing their components", () => {
+    const input = engineInput(500000);
+    expect(calculateMonthlyAssumptions("2026-07-23", "2026-08-31", {
+      goal,
+      minimumCashBufferCents: input.minimumCashBufferCents,
+      includeProjectedVariableExpenses: true,
+      incomeExpectations: input.incomeExpectations,
+      plannedExpenses: input.plannedExpenses,
+      recurringItems: input.recurringItems
+    })).toEqual([
+      { month: "2026-07", label: "Jul", expectedIncomeCents: 100000, recurringIncomeCents: 0, plannedExpenseCents: 50000, recurringExpenseCents: 50000 },
+      { month: "2026-08", label: "Aug", expectedIncomeCents: 0, recurringIncomeCents: 0, plannedExpenseCents: 0, recurringExpenseCents: 50000 }
+    ]);
   });
 
   it("consistently applies or excludes projected variable expenses", () => {

@@ -6,6 +6,14 @@ export function monthAfter(month: string): string {
   return monthNumber === 12 ? `${year + 1}-01` : `${year}-${String(monthNumber + 1).padStart(2, "0")}`;
 }
 
+export function median(values: number[]): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((left, right) => left - right);
+  const middle = Math.floor(sorted.length / 2);
+  if (sorted.length % 2 === 1) return sorted[middle];
+  return Math.trunc((sorted[middle - 1] + sorted[middle]) / 2);
+}
+
 export function calculateDashboardActuals(rows: DashboardTransactionRow[], asOf: string) {
   const currentMonth = asOf.slice(0, 7);
   const monthStart = `${currentMonth}-01`;

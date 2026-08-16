@@ -39,12 +39,17 @@ Show:
 - Year-to-date savings
 - Annual target progress
 - Forecasted year-end savings
+- Typical monthly spending as the median of up to six complete covered months
+- Forecast average and total spending for the remaining calendar months
+- Projected year-end net worth, with actual and forecast portions clearly distinguished
 - Safe to spend for the rest of the month
 - Secondary weekly and daily safe-to-spend values
 - Monthly income/expense/savings chart showing all calendar months, with future months forecast from expected income, recurring items, planned expenses, and the historical variable-spending baseline
 - Category breakdown
 - Upcoming recurring expenses
 - Off-track warnings
+
+Typical monthly spending excludes transfers, exceptional transactions, and transactions explicitly excluded from forecast baselines. The year-end net-worth projection uses all active accounts included in net worth, adds forecast net income, and assumes no investment market gains or losses.
 
 Safe to spend is the main visual priority.
 
@@ -147,6 +152,8 @@ The expected scenario combines:
 - Minimum desired cash buffer
 
 The user can inspect and edit assumptions. Conservative and optimistic scenarios are later features.
+
+The Forecast page visualizes one-time expected income and planned expenses separately from recurring income and expenses, grouped by month through the active goal date. The Dashboard includes a compact version of this assumption breakdown with a link to edit it.
 
 ### Settings and backup
 

@@ -1,7 +1,7 @@
 import type Database from "better-sqlite3";
 import { effectiveBalanceSql } from "@/features/accounts/balance";
 import { randomUUID } from "node:crypto";
-import { calculateForecast, calculateMonthlyForecast } from "./engine";
+import { calculateForecast, calculateMonthlyForecast, calculateYearOutlook } from "./engine";
 import type { ForecastConfiguration, ForecastResult, GoalWrite, IncomeExpectation, PlannedExpense, RecurringItem, SavingsGoal } from "./model";
 import { dashboardDateSchema } from "@/features/dashboard/validation";
 
@@ -89,6 +89,13 @@ export function createForecastRepository(database: Database.Database, options: F
 
     historicalMonthlyBaseline(asOfInput: string) {
       return historicalMonthlyBaseline(dashboardDateSchema.parse(asOfInput));
+    },
+
+    yearOutlook(asOfInput: string) {
+      const asOf = dashboardDateSchema.parse(asOfInput);
+      const currentNetWorthCents = database.prepare(`SELECT COALESCE(SUM(${effectiveBalanceSql}), 0) FROM accounts a
+        WHERE a.is_archived = 0 AND a.included_in_net_worth = 1`).pluck().get() as number;
+      return calculateYearOutlook(asOf, currentNetWorthCents, this.getConfiguration(), historicalMonthlyBaseline(asOf));
     },
 
     saveGoal(input: GoalWrite): SavingsGoal {

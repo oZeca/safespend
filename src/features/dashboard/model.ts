@@ -26,8 +26,9 @@ export interface DashboardMonthlyBalancePoint {
   date: string;
   availableCashCents: number | null;
   investmentBalanceCents: number | null;
-  totalBalanceCents: number | null;
+  netWorthCents: number | null;
   isCurrentMonth: boolean;
+  isForecast?: boolean;
 }
 
 export interface DashboardCategorySpending {
@@ -50,6 +51,8 @@ export interface DashboardData {
   currentMonthTransactionCount: number;
   currentMonthTotals: { incomeCents: number; expenseCents: number; savingsCents: number };
   yearToDateSavingsCents: number;
+  typicalMonthlySpendingCents: number | null;
+  typicalMonthlySpendingMonthCount: number;
   monthlyTrend: DashboardMonthlyPoint[];
   monthlyBalances: DashboardMonthlyBalancePoint[];
   categorySpending: DashboardCategorySpending[];

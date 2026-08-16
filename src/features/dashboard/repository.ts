@@ -1,5 +1,5 @@
 import type Database from "better-sqlite3";
-import { calculateCategorySpending, calculateDashboardActuals } from "./calculations";
+import { calculateCategorySpending, calculateDashboardActuals, median, monthAfter } from "./calculations";
 import type { DashboardCategoryRow, DashboardData, DashboardMonthlyBalancePoint, DashboardTransactionRow } from "./model";
 import { dashboardDateSchema } from "./validation";
 import { effectiveBalanceSql } from "@/features/accounts/balance";
@@ -30,6 +30,7 @@ export function createDashboardRepository(database: Database.Database) {
         )`;
       const availableCashAtDate = database.prepare(balanceAtDateSql("a.included_in_available_cash = 1"));
       const investmentsAtDate = database.prepare(balanceAtDateSql("a.account_type = 'investment' AND a.included_in_net_worth = 1"));
+      const netWorthAtDate = database.prepare(balanceAtDateSql("a.included_in_net_worth = 1"));
       const monthlyBalances: DashboardMonthlyBalancePoint[] = [];
       for (let monthNumber = 1; monthNumber <= Number(currentMonth.slice(5, 7)); monthNumber += 1) {
         const month = `${asOf.slice(0, 4)}-${String(monthNumber).padStart(2, "0")}`;
@@ -39,6 +40,7 @@ export function createDashboardRepository(database: Database.Database) {
         const date = month === currentMonth ? asOf : monthEndDate.toISOString().slice(0, 10);
         const cash = availableCashAtDate.get({ date }) as { accountCount: number; knownBalanceCount: number; balanceCents: number };
         const investments = investmentsAtDate.get({ date }) as { accountCount: number; knownBalanceCount: number; balanceCents: number };
+        const netWorth = netWorthAtDate.get({ date }) as { accountCount: number; knownBalanceCount: number; balanceCents: number };
         const availableCashCents = cash.accountCount === cash.knownBalanceCount ? cash.balanceCents : null;
         const investmentBalanceCents = investments.accountCount === investments.knownBalanceCount ? investments.balanceCents : null;
         monthlyBalances.push({
@@ -47,9 +49,24 @@ export function createDashboardRepository(database: Database.Database) {
           date,
           availableCashCents,
           investmentBalanceCents,
-          totalBalanceCents: availableCashCents === null || investmentBalanceCents === null ? null : availableCashCents + investmentBalanceCents,
+          netWorthCents: netWorth.accountCount === netWorth.knownBalanceCount ? netWorth.balanceCents : null,
           isCurrentMonth: month === currentMonth
         });
+      }
+      const sixMonthsAgo = new Date(`${currentMonth}-01T00:00:00.000Z`);
+      sixMonthsAgo.setUTCMonth(sixMonthsAgo.getUTCMonth() - 6);
+      const typicalStart = sixMonthsAgo.toISOString().slice(0, 10);
+      const firstTypicalTransaction = database.prepare(`SELECT MIN(date) FROM transactions
+        WHERE is_deleted = 0 AND date < ? AND transaction_type IN ('expense', 'refund')
+          AND is_exceptional = 0 AND excluded_from_forecast_baseline = 0`).pluck().get(`${currentMonth}-01`) as string | null;
+      const typicalMonthlyValues: number[] = [];
+      if (firstTypicalTransaction) {
+        const firstMonth = firstTypicalTransaction.slice(0, 7) > typicalStart.slice(0, 7) ? firstTypicalTransaction.slice(0, 7) : typicalStart.slice(0, 7);
+        const monthlyRows = database.prepare(`SELECT substr(date, 1, 7) AS month, MAX(0, -SUM(amount_cents)) AS spendingCents
+          FROM transactions WHERE is_deleted = 0 AND date >= ? AND date < ? AND transaction_type IN ('expense', 'refund')
+            AND is_exceptional = 0 AND excluded_from_forecast_baseline = 0 GROUP BY substr(date, 1, 7)`).all(`${firstMonth}-01`, `${currentMonth}-01`) as Array<{ month: string; spendingCents: number }>;
+        const byMonth = new Map(monthlyRows.map((row) => [row.month, row.spendingCents]));
+        for (let month = firstMonth; month < currentMonth; month = monthAfter(month)) typicalMonthlyValues.push(byMonth.get(month) ?? 0);
       }
       const transactionCount = database.prepare("SELECT COUNT(*) FROM transactions WHERE is_deleted = 0").pluck().get() as number;
       const transactions = database.prepare(`SELECT date, transaction_type AS transactionType, amount_cents AS amountCents
@@ -70,6 +87,8 @@ export function createDashboardRepository(database: Database.Database) {
         ...actuals,
         ...accountSummary,
         transactionCount,
+        typicalMonthlySpendingCents: median(typicalMonthlyValues),
+        typicalMonthlySpendingMonthCount: typicalMonthlyValues.length,
         monthlyBalances,
         categorySpending,
         uncategorizedSpendingCents: categorySpending.find((category) => category.categoryId === null)?.monthlySpending[currentMonth] ?? 0

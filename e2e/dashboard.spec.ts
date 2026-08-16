@@ -14,7 +14,7 @@ test("shows actual dashboard metrics and drills into matching transactions", asy
   await page.goto("/transactions/new");
   await page.getByRole("combobox", { name: "Account", exact: true }).selectOption({ label: accountName });
   await page.getByLabel("Description").fill(description);
-  await page.getByLabel("Amount").fill("123.45");
+  await page.getByRole("textbox", { name: /^Amount/ }).fill("123.45");
   await page.getByRole("combobox", { name: "Type", exact: true }).selectOption("income");
   await page.getByRole("combobox", { name: "Category", exact: true }).selectOption({ label: "Salary" });
   await page.getByRole("button", { name: "Create transaction" }).click();
@@ -23,7 +23,7 @@ test("shows actual dashboard metrics and drills into matching transactions", asy
   await page.goto("/transactions/new");
   await page.getByRole("combobox", { name: "Account", exact: true }).selectOption({ label: accountName });
   await page.getByLabel("Description").fill(expenseDescription);
-  await page.getByLabel("Amount").fill("-45.67");
+  await page.getByRole("textbox", { name: /^Amount/ }).fill("-45.67");
   await page.getByRole("combobox", { name: "Type", exact: true }).selectOption("expense");
   await page.getByRole("combobox", { name: "Category", exact: true }).selectOption({ label: "Groceries" });
   await page.getByRole("button", { name: "Create transaction" }).click();

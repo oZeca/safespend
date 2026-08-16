@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/features/accounts/money";
 import { createIncomeAction, createPlannedExpenseAction, createRecurringAction, deleteAssumptionAction, saveGoalAction, toggleProjectedVariableExpensesAction } from "@/features/forecasting/actions";
 import { GoalForm, IncomeForm, PlannedExpenseForm, RecurringForm } from "@/features/forecasting/forecast-forms";
+import { PlannedCashFlowChart, RecurringScheduleChart } from "@/features/forecasting/assumption-charts";
+import { calculateMonthlyAssumptions } from "@/features/forecasting/engine";
 import { getForecastRepository } from "@/features/forecasting/server-repository";
 import { localDateString } from "@/lib/dates";
 
@@ -37,6 +39,9 @@ export default async function ForecastPage({ searchParams }: { searchParams: Pro
   const defaultStart = `${today.slice(0, 4)}-01-01`;
   const defaultTarget = `${today.slice(0, 4)}-12-31`;
   const forecast = repository.forecast(today);
+  const chartHorizon = configuration.goal?.targetDate ?? `${today.slice(0, 4)}-12-31`;
+  const assumptionChart = calculateMonthlyAssumptions(today, chartHorizon, configuration);
+  const hasAssumptions = configuration.incomeExpectations.length > 0 || configuration.plannedExpenses.length > 0 || configuration.recurringItems.length > 0;
   return <section className="mx-auto max-w-5xl space-y-7">
     <div><p className="text-sm font-medium text-primary">Forecast</p><h1 className="text-3xl font-semibold tracking-tight">Savings goal and assumptions</h1><p className="mt-2 text-sm text-muted-foreground">Define the expected scenario behind safe-to-spend. All values remain editable and local.</p></div>
     {status && statuses[status] && <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900" role="status">{statuses[status]}</div>}
@@ -47,6 +52,11 @@ export default async function ForecastPage({ searchParams }: { searchParams: Pro
       <p className="text-sm font-medium">Current expected result</p><p className={`mt-2 text-3xl font-bold tabular-nums ${forecast.safeToSpendMonthCents >= 0 ? "text-emerald-800" : "text-red-800"}`}>{formatCurrency(forecast.safeToSpendMonthCents)} safe this month</p><p className="mt-2 text-sm" data-sensitive>Forecasted target-date savings: {formatCurrency(forecast.forecastedTargetSavingsCents)} against {formatCurrency(forecast.goal.targetAmountCents)}.</p><form action={toggleProjectedVariableExpensesAction} className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-current/10 pt-3 text-sm"><input name="include" type="hidden" value={String(!forecast.includeProjectedVariableExpenses)} /><input name="returnTo" type="hidden" value="/forecast" /><span data-sensitive>Projected variable spending ({formatCurrency(forecast.projectedVariableExpensesCents)}) is <strong>{forecast.includeProjectedVariableExpenses ? "included" : "excluded"}</strong> in target-date savings.</span><Button size="sm" type="submit" variant="outline">{forecast.includeProjectedVariableExpenses ? "Exclude projection" : "Include projection"}</Button></form>
     </section>}
 
+    <section className="min-w-0 rounded-xl border bg-card p-5 shadow-sm sm:p-7">
+      <div className="mb-5"><h2 className="text-xl font-semibold">Planned cash flow</h2><p className="mt-1 text-sm text-muted-foreground">One-time and recurring assumptions by month through {chartHorizon}. These are future amounts only and do not include recorded transactions.</p></div>
+      {hasAssumptions ? <PlannedCashFlowChart data={assumptionChart} /> : <div className="rounded-md border border-dashed p-5 text-center text-sm text-muted-foreground">Add expected income, a planned expense, or a recurring item to see the chart.</div>}
+    </section>
+
     <div className="grid gap-6 lg:grid-cols-2">
       <section className="space-y-4 rounded-xl border bg-card p-5 shadow-sm"><div><h2 className="text-lg font-semibold">Expected income</h2><p className="text-sm text-muted-foreground">One-time income not already recorded as a transaction.</p></div><IncomeForm action={createIncomeAction} defaultDate={tomorrow} />
         {configuration.incomeExpectations.length ? <div className="space-y-2">{configuration.incomeExpectations.map((item) => <div className="flex items-center justify-between gap-3 rounded-md bg-muted p-3 text-sm" key={item.id}><span><span className="font-medium">{item.name}</span><span className="block text-xs text-muted-foreground">{item.expectedDate}</span></span><span className="ml-auto font-medium tabular-nums text-emerald-700">{formatCurrency(item.amountCents)}</span><Button asChild aria-label={`Edit ${item.name}`} size="sm" variant="outline"><Link href={`/forecast/income/${item.id}/edit`}><Pencil className="h-4 w-4" /></Link></Button><DeleteForm id={item.id} kind="income" /></div>)}</div> : <p className="text-sm text-muted-foreground">No expected income assumptions.</p>}
@@ -56,7 +66,9 @@ export default async function ForecastPage({ searchParams }: { searchParams: Pro
       </section>
     </div>
 
-    <section className="space-y-4 rounded-xl border bg-card p-5 shadow-sm sm:p-7"><div><h2 className="text-xl font-semibold">Recurring items</h2><p className="mt-1 text-sm text-muted-foreground">Expected fixed income and payments generated from the next date through the optional end date or goal date.</p></div><RecurringForm action={createRecurringAction} defaultDate={tomorrow} />
+    <section className="space-y-4 rounded-xl border bg-card p-5 shadow-sm sm:p-7"><div><h2 className="text-xl font-semibold">Recurring items</h2><p className="mt-1 text-sm text-muted-foreground">Expected fixed income and payments generated from the next date through the optional end date or goal date.</p></div>
+      {configuration.recurringItems.length > 0 && <div className="rounded-lg border p-4"><div className="mb-3"><h3 className="font-medium">Recurring schedule</h3><p className="text-sm text-muted-foreground">Expected occurrences by month through {chartHorizon}.</p></div><RecurringScheduleChart data={assumptionChart} /></div>}
+      <RecurringForm action={createRecurringAction} defaultDate={tomorrow} />
       <nav aria-label="Filter recurring items by frequency" className="flex flex-wrap gap-2">
         {(["all", "monthly", "yearly"] as const).map((option) => <Button asChild key={option} size="sm" variant={frequency === option ? "default" : "outline"}><Link aria-current={frequency === option ? "page" : undefined} href={option === "all" ? "/forecast" : `/forecast?frequency=${option}`}>{option === "all" ? "All" : option === "monthly" ? "Monthly" : "Yearly"}</Link></Button>)}
       </nav>

@@ -52,6 +52,27 @@ export interface MonthlyForecastPoint {
   savingsCents: number;
 }
 
+export interface MonthlyAssumptionPoint {
+  month: string;
+  label: string;
+  expectedIncomeCents: number;
+  recurringIncomeCents: number;
+  plannedExpenseCents: number;
+  recurringExpenseCents: number;
+}
+
+export interface YearOutlook {
+  includeProjectedVariableExpenses: boolean;
+  currentNetWorthCents: number;
+  projectedYearEndNetWorthCents: number;
+  projectedNetWorthChangeCents: number;
+  projectedRemainingSpendingCents: number;
+  projectedAverageMonthlySpendingCents: number;
+  remainingMonthCount: number;
+  currentMonthRemainingSavingsCents: number;
+  monthlyForecast: MonthlyForecastPoint[];
+}
+
 export interface GoalWrite {
   name: string;
   startDate: string;

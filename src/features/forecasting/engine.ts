@@ -1,4 +1,4 @@
-import type { ForecastConfiguration, ForecastOccurrence, ForecastResult, IncomeExpectation, MonthlyForecastPoint, PlannedExpense, RecurringItem, SavingsGoal } from "./model";
+import type { ForecastConfiguration, ForecastOccurrence, ForecastResult, IncomeExpectation, MonthlyAssumptionPoint, MonthlyForecastPoint, PlannedExpense, RecurringItem, SavingsGoal, YearOutlook } from "./model";
 
 interface ForecastEngineInput {
   asOf: string;
@@ -57,6 +57,28 @@ export function expandRecurringItems(items: RecurringItem[], afterDate: string, 
   return occurrences.sort((left, right) => left.date.localeCompare(right.date) || left.name.localeCompare(right.name));
 }
 
+export function calculateMonthlyAssumptions(asOf: string, throughDate: string, configuration: ForecastConfiguration): MonthlyAssumptionPoint[] {
+  const horizon = throughDate < asOf ? asOf : throughDate;
+  const occurrences = expandRecurringItems(configuration.recurringItems, asOf, horizon);
+  const points: MonthlyAssumptionPoint[] = [];
+  let cursor = `${asOf.slice(0, 7)}-01`;
+  const lastMonth = horizon.slice(0, 7);
+  while (cursor.slice(0, 7) <= lastMonth) {
+    const month = cursor.slice(0, 7);
+    const monthOccurrences = occurrences.filter((item) => item.date.startsWith(month));
+    points.push({
+      month,
+      label: new Intl.DateTimeFormat("en", { month: "short", year: month.slice(0, 4) === asOf.slice(0, 4) ? undefined : "2-digit", timeZone: "UTC" }).format(utcDate(cursor)),
+      expectedIncomeCents: sum(configuration.incomeExpectations.filter((item) => item.expectedDate > asOf && item.expectedDate <= horizon && item.expectedDate.startsWith(month)).map((item) => item.amountCents)),
+      recurringIncomeCents: sum(monthOccurrences.filter((item) => item.transactionType === "income").map((item) => item.amountCents)),
+      plannedExpenseCents: sum(configuration.plannedExpenses.filter((item) => item.expectedDate > asOf && item.expectedDate <= horizon && item.expectedDate.startsWith(month)).map((item) => item.amountCents)),
+      recurringExpenseCents: sum(monthOccurrences.filter((item) => item.transactionType === "expense").map((item) => Math.abs(item.amountCents)))
+    });
+    cursor = addMonths(cursor, 1);
+  }
+  return points;
+}
+
 export function calculateMonthlyForecast(asOf: string, configuration: ForecastConfiguration, historicalMonthlyBaselineCents: number): MonthlyForecastPoint[] {
   const year = asOf.slice(0, 4);
   const currentMonth = asOf.slice(0, 7);
@@ -96,6 +118,37 @@ function projectedBaseline(baselineCents: number, asOf: string, targetDate: stri
     cursor = new Date(Date.UTC(year, month + 1, 1));
   }
   return total;
+}
+
+export function calculateYearOutlook(asOf: string, currentNetWorthCents: number, configuration: ForecastConfiguration, historicalMonthlyBaselineCents: number): YearOutlook {
+  const yearEnd = `${asOf.slice(0, 4)}-12-31`;
+  const occurrences = expandRecurringItems(configuration.recurringItems, asOf, yearEnd);
+  const futureIncomeCents = sum(configuration.incomeExpectations.filter((item) => item.expectedDate > asOf && item.expectedDate <= yearEnd).map((item) => item.amountCents))
+    + sum(occurrences.filter((item) => item.transactionType === "income").map((item) => item.amountCents));
+  const recurringExpensesCents = sum(occurrences.filter((item) => item.transactionType === "expense").map((item) => Math.abs(item.amountCents)));
+  const plannedExpensesCents = sum(configuration.plannedExpenses.filter((item) => item.expectedDate > asOf && item.expectedDate <= yearEnd).map((item) => item.amountCents));
+  const variableExpensesCents = configuration.includeProjectedVariableExpenses ? projectedBaseline(historicalMonthlyBaselineCents, asOf, yearEnd) : 0;
+  const projectedRemainingSpendingCents = recurringExpensesCents + plannedExpensesCents + variableExpensesCents;
+  const projectedNetWorthChangeCents = futureIncomeCents - projectedRemainingSpendingCents;
+  const monthlyForecast = calculateMonthlyForecast(asOf, configuration, configuration.includeProjectedVariableExpenses ? historicalMonthlyBaselineCents : 0);
+  const currentMonthEnd = dateString(new Date(Date.UTC(Number(asOf.slice(0, 4)), Number(asOf.slice(5, 7)), 0)));
+  const currentMonthIncome = sum(configuration.incomeExpectations.filter((item) => item.expectedDate > asOf && item.expectedDate <= currentMonthEnd).map((item) => item.amountCents))
+    + sum(occurrences.filter((item) => item.date <= currentMonthEnd && item.transactionType === "income").map((item) => item.amountCents));
+  const currentMonthExpenses = sum(configuration.plannedExpenses.filter((item) => item.expectedDate > asOf && item.expectedDate <= currentMonthEnd).map((item) => item.amountCents))
+    + sum(occurrences.filter((item) => item.date <= currentMonthEnd && item.transactionType === "expense").map((item) => Math.abs(item.amountCents)))
+    + (configuration.includeProjectedVariableExpenses ? projectedBaseline(historicalMonthlyBaselineCents, asOf, currentMonthEnd) : 0);
+  const remainingMonthCount = 13 - Number(asOf.slice(5, 7));
+  return {
+    includeProjectedVariableExpenses: configuration.includeProjectedVariableExpenses,
+    currentNetWorthCents,
+    projectedYearEndNetWorthCents: currentNetWorthCents + projectedNetWorthChangeCents,
+    projectedNetWorthChangeCents,
+    projectedRemainingSpendingCents,
+    projectedAverageMonthlySpendingCents: remainingMonthCount > 0 ? Math.trunc(projectedRemainingSpendingCents / remainingMonthCount) : 0,
+    remainingMonthCount,
+    currentMonthRemainingSavingsCents: currentMonthIncome - currentMonthExpenses,
+    monthlyForecast
+  };
 }
 
 export function calculateForecast(input: ForecastEngineInput): ForecastResult {
