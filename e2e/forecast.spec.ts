@@ -79,7 +79,7 @@ test("configures forecast assumptions and shows explained safe-to-spend", async 
   await expect(page.getByText(updatedRecurringName)).not.toBeVisible();
 
   await page.goto("/dashboard");
-  await expect(page.getByText("Safe to spend for the rest of this month")).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Safe to spend for the rest of/ })).toBeVisible();
   await expect(page.getByText("How safe-to-spend was calculated")).toBeVisible();
   await expect(page.getByText(updatedRecurringName)).toBeVisible();
   await expect(page.getByText("Forecasted target-date savings")).toBeVisible();
