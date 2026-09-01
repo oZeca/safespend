@@ -65,11 +65,9 @@ export default function DashboardPage() {
   const savingsSinceGoalStartCents = forecast ? forecast.savingsCreditedCents - forecast.goal.startingAmountCents : 0;
   const savingsNeededSinceGoalStartCents = forecast ? Math.max(0, forecast.goal.targetAmountCents - forecast.goal.startingAmountCents) : 0;
 
-  return <section className="w-full min-w-0 space-y-7">
-    <div><p className="text-sm font-medium text-primary">Dashboard</p><h1 className="text-3xl font-semibold tracking-tight">Your financial overview</h1><p className="mt-2 text-sm text-muted-foreground">Actual balances and transactions as of {data.asOf}.</p></div>
-
-    {forecast ? <SafeToSpendHero forecast={forecast} monthLabel={monthLabel} /> : <div className="-mx-4 w-auto border-y border-primary/20 bg-gradient-to-b from-card/30 to-primary/[0.08] px-6 py-10 sm:-mx-5 sm:px-8 lg:-mx-7 lg:px-10">
-      <p className="text-sm font-medium text-primary">Safe to spend this month</p><p className="mt-2 text-4xl font-bold tracking-tight sm:text-5xl">Goal required</p><p className="mt-4 max-w-xl text-sm text-muted-foreground">Create an annual savings goal and minimum cash buffer before safe-to-spend can be calculated.</p><Button asChild className="mt-5"><Link href="/forecast">Configure forecast</Link></Button>
+  return <section className="-mt-5 w-full min-w-0 space-y-7 sm:-mt-6">
+    {forecast ? <SafeToSpendHero forecast={forecast} monthLabel={monthLabel} /> : <div className="-mx-4 w-auto border-t border-primary/20 bg-gradient-to-b from-card/30 via-primary/[0.05] to-background px-6 py-10 sm:-mx-5 sm:px-8 lg:-mx-7 lg:px-10">
+      <h1 className="text-sm font-medium text-primary">Safe to spend this month</h1><p className="mt-2 text-4xl font-bold tracking-tight sm:text-5xl">Goal required</p><p className="mt-4 max-w-xl text-sm text-muted-foreground">Create an annual savings goal and minimum cash buffer before safe-to-spend can be calculated.</p><Button asChild className="mt-5"><Link href="/forecast">Configure forecast</Link></Button>
     </div>}
 
     {data.activeAccountCount === 0 && <div className="rounded-xl border border-dashed bg-card p-8 text-center">
