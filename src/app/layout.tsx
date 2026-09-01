@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AppShell } from "@/components/app-shell";
+import { appearanceBootScript } from "@/components/appearance-provider";
 
 export const metadata: Metadata = {
   title: "SafeSpend",
@@ -17,9 +18,12 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#0b855f",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f7f4e8" },
+    { media: "(prefers-color-scheme: dark)", color: "#171714" },
+  ],
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body><AppShell>{children}</AppShell></body></html>;
+  return <html lang="en" suppressHydrationWarning><head><script dangerouslySetInnerHTML={{ __html: appearanceBootScript }} /></head><body><AppShell>{children}</AppShell></body></html>;
 }

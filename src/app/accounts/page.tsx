@@ -186,7 +186,7 @@ function AccountCard({ account }: { account: Account }) {
               </p>
               {account.balanceMode === "calculated" && (
                 <InfoTooltip
-                  calculation={`From opening balance + activity\n${formatCurrency(account.openingBalanceCents, account.currency)} opening + ${formatCurrency(account.currentBalanceCents - account.openingBalanceCents, account.currency)} activity since ${account.openingBalanceDate}`}
+                  calculation={`From opening balance + transactions\n${formatCurrency(account.openingBalanceCents, account.currency)} opening + ${formatCurrency(account.currentBalanceCents - account.openingBalanceCents, account.currency)} transactions since ${account.openingBalanceDate}`}
                 />
               )}
             </div>

@@ -24,7 +24,7 @@ export function TransactionFilters({ params, accounts, categories, datePresets, 
   const selectClass = "h-9 min-w-0 rounded-md border bg-background px-2 text-sm";
   const inputClass = "h-10 w-full rounded-md border bg-background px-3 text-sm";
   const selectedAccount = accounts.find((account) => account.id === params.account);
-  const quickAccounts = selectedAccount && !accounts.slice(0, 4).some((account) => account.id === selectedAccount.id) ? [...accounts.slice(0, 3), selectedAccount] : accounts.slice(0, 4);
+  const quickAccounts = selectedAccount && !accounts.some((account) => account.id === selectedAccount.id) ? [...accounts, selectedAccount] : accounts;
   const quickTypes = [{ value: "", label: "All types" }, { value: "spending", label: "Spending" }, { value: "income", label: "Income" }, { value: "transfer", label: "Transfers" }, { value: "refund", label: "Refunds" }] as const;
 
   return <>

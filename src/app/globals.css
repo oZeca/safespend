@@ -3,11 +3,36 @@
 @tailwind utilities;
 
 @layer base {
-  :root { --background: 0 0% 100%; --foreground: 222.2 84% 4.9%; --card: 0 0% 100%; --card-foreground: 222.2 84% 4.9%; --primary: 160 84% 28%; --primary-foreground: 0 0% 100%; --muted: 210 40% 96.1%; --muted-foreground: 215.4 16.3% 46.9%; --border: 214.3 31.8% 91.4%; }
+  :root { --background: 48 47% 94%; --foreground: 45 12% 10%; --card: 48 42% 97%; --card-foreground: 45 12% 10%; --primary: 74 65% 30%; --primary-foreground: 48 50% 98%; --muted: 48 18% 89%; --muted-foreground: 45 6% 43%; --border: 46 18% 83%; }
+  .dark { --background: 50 8% 9%; --foreground: 46 25% 91%; --card: 48 7% 12%; --card-foreground: 46 25% 91%; --primary: 72 52% 59%; --primary-foreground: 55 18% 9%; --muted: 45 6% 18%; --muted-foreground: 45 8% 65%; --border: 45 6% 24%; }
   * { @apply border-border; }
   html, body { max-width: 100%; overflow-x: hidden; }
-  body { @apply bg-background text-foreground antialiased; }
+  body { @apply bg-background text-foreground antialiased; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
   html { -webkit-tap-highlight-color: transparent; }
+  h1, h2, h3 { text-wrap: balance; }
+  input, select, textarea { @apply border-border bg-card text-foreground placeholder:text-muted-foreground; }
+  input[type="file"]::file-selector-button { @apply mr-3 rounded-md border-0 bg-muted px-3 py-2 text-xs font-medium text-foreground; }
+  :focus-visible { @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-background; }
+}
+
+@layer components {
+  .panel { @apply overflow-hidden rounded-lg border bg-card shadow-[0_1px_2px_hsl(var(--foreground)/0.04)]; }
+  .panel-header { @apply flex items-center justify-between gap-4 border-b px-4 py-4 sm:px-5; }
+  .panel-body { @apply p-4 sm:p-5; }
+  .eyebrow { @apply mb-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground; }
+  .status-success { @apply border-primary/30 bg-primary/10 text-foreground; }
+  .status-danger { @apply border-red-500/30 bg-red-500/10 text-red-800 dark:text-red-300; }
+  .page-title { @apply text-2xl font-semibold tracking-tight sm:text-3xl; }
+  .sidebar, .app-content { transition-property: width, padding-left; transition-duration: 180ms; transition-timing-function: ease-out; }
+}
+
+/* Transaction rows retain one semantic article per record at every viewport.
+   The desktop presentation is table-like without duplicating interactive controls. */
+@media (min-width: 768px) {
+  main .space-y-3.md\:hidden { display: block !important; overflow: hidden; border: 1px solid hsl(var(--border)); border-radius: 0.5rem; background: hsl(var(--card)); }
+  main .space-y-3.md\:hidden > article { grid-template-columns: 9rem minmax(12rem, 1fr) minmax(18rem, 1fr); align-items: center; border: 0; border-bottom: 1px solid hsl(var(--border)); border-radius: 0; box-shadow: none; }
+  main .space-y-3.md\:hidden > article:last-child { border-bottom: 0; }
+  main .overflow-x-auto.md\:block { display: none !important; }
 }
 
 @layer utilities {
@@ -22,6 +47,7 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
     [data-privacy] main :is(.tabular-nums, [data-sensitive], input[inputmode="decimal"], [role="img"][aria-label*="chart"]) {
       transition: none;
     }

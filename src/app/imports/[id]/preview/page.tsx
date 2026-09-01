@@ -5,13 +5,14 @@ import { formatCurrency } from "@/features/accounts/money";
 import { getImportRepository } from "@/features/imports/server-repository";
 import { ImportPreviewForm } from "@/features/imports/preview-form";
 import { getTransactionRepository } from "@/features/transactions/server-repository";
+import { ImportStepper } from "@/features/imports/import-stepper";
 
 export const dynamic = "force-dynamic";
 export default async function PreviewImportPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params; const detail = getImportRepository().findById(id); if (!detail) notFound(); if (detail.status === "mapping") redirect(`/imports/${id}/map`);
   const validCount = detail.rows.filter((row) => !row.error && !row.isExactDuplicate).length; const completed = detail.status === "completed";
   const categories = completed ? [] : getTransactionRepository().listOptions(detail.accountId).categories;
-  return <section className="mx-auto max-w-6xl space-y-6"><div><Link className="text-sm text-muted-foreground hover:text-foreground" href="/imports">← Imports</Link><h1 className="mt-3 text-3xl font-semibold tracking-tight">{completed ? "Import result" : "Preview import"}</h1><p className="mt-2 text-sm text-muted-foreground">{detail.fileName} · {detail.accountName}</p></div>
+  return <section className="mx-auto max-w-7xl space-y-6"><div><Link className="text-sm text-muted-foreground hover:text-foreground" href="/imports">← Imports</Link><h1 className="page-title mt-3">{completed ? "Import result" : "Preview import"}</h1><p className="mt-2 text-sm text-muted-foreground">{detail.fileName} · {detail.accountName}</p></div><ImportStepper step={3} />
     {completed && <div className="rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900" role="status">Import completed. {detail.importedCount} imported, {detail.skippedCount} duplicates skipped, {detail.excludedCount} manually excluded, {detail.errorCount} invalid.</div>}
     <div className="grid gap-4 sm:grid-cols-4"><div className="rounded-xl border bg-card p-4"><p className="text-sm text-muted-foreground">Rows</p><p className="mt-1 text-2xl font-semibold">{detail.rowCount}</p></div><div className="rounded-xl border bg-card p-4"><p className="text-sm text-muted-foreground">Ready</p><p className="mt-1 text-2xl font-semibold text-emerald-700">{completed ? detail.importedCount : validCount}</p></div><div className="rounded-xl border bg-card p-4"><p className="text-sm text-muted-foreground">Duplicates</p><p className="mt-1 text-2xl font-semibold">{detail.skippedCount}</p></div><div className="rounded-xl border bg-card p-4"><p className="text-sm text-muted-foreground">Invalid</p><p className="mt-1 text-2xl font-semibold text-red-700">{detail.errorCount}</p></div></div>
     {!completed && <ImportPreviewForm categories={categories} detail={detail} />}

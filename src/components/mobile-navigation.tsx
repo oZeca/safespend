@@ -1,33 +1,22 @@
 "use client";
 
-import { Landmark, LayoutDashboard, MoreHorizontal, PiggyBank, ReceiptText, Settings, Tags, Upload } from "lucide-react";
+import { MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-
-const primary = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/transactions", label: "Transactions", icon: ReceiptText },
-  { href: "/accounts", label: "Accounts", icon: Landmark },
-  { href: "/forecast", label: "Forecast", icon: PiggyBank },
-];
-const secondary = [
-  { href: "/imports", label: "Imports", icon: Upload },
-  { href: "/rules", label: "Rules", icon: Tags },
-  { href: "/settings", label: "Settings", icon: Settings },
-];
-
-function active(pathname: string, href: string) {
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
+import { isNavigationActive as active, primaryNavigation as primary, secondaryNavigation as secondary } from "@/components/navigation";
 
 export function MobileNavigation() {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
   const moreButton = useRef<HTMLButtonElement>(null);
+  const previousPathname = useRef(pathname);
   const moreActive = secondary.some((item) => active(pathname, item.href));
-  useEffect(() => setMoreOpen(false), [pathname]);
+  useEffect(() => {
+    if (previousPathname.current !== pathname) setMoreOpen(false);
+    previousPathname.current = pathname;
+  }, [pathname]);
   useEffect(() => {
     if (!moreOpen) return;
     const close = (event: KeyboardEvent) => {

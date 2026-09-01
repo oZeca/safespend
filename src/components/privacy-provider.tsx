@@ -25,20 +25,19 @@ export function PrivacyProvider({ children }: Readonly<{ children: React.ReactNo
   return <PrivacyContext.Provider value={{ hidden, toggle }}><div data-privacy={hidden ? "hidden" : "visible"}>{children}</div></PrivacyContext.Provider>;
 }
 
-export function PrivacyToggle() {
+export function PrivacyToggle({ compact = false }: { compact?: boolean }) {
   const privacy = useContext(PrivacyContext);
   if (!privacy) throw new Error("PrivacyToggle must be rendered inside PrivacyProvider.");
   const { hidden, toggle } = privacy;
   return <Button
-    aria-label={hidden ? "Show sensitive amounts" : "Hide sensitive amounts"}
     aria-pressed={hidden}
-    className="h-9 shrink-0 px-2 sm:px-3"
+    className="h-9 shrink-0 px-2"
     onClick={toggle}
     title={hidden ? "Show sensitive amounts" : "Hide sensitive amounts"}
     type="button"
     variant="outline"
   >
     {hidden ? <Eye aria-hidden="true" className="h-4 w-4" /> : <EyeOff aria-hidden="true" className="h-4 w-4" />}
-    <span className="ml-2 hidden lg:inline">{hidden ? "Show amounts" : "Hide amounts"}</span>
+    <span className={compact ? "sr-only" : "ml-2"}>{hidden ? "Show sensitive amounts" : "Hide sensitive amounts"}</span>
   </Button>;
 }

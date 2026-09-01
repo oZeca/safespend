@@ -218,6 +218,9 @@ export function calculateForecast(input: ForecastEngineInput): ForecastResult {
     monthPlannedExpensesCents,
     monthSavingsAllocationCents,
     onTrack: forecastedTargetSavingsCents >= input.goal.targetAmountCents,
-    upcomingRecurringExpenses: monthOccurrences.filter((item) => item.transactionType === "expense").slice(0, 5)
+    upcomingRecurringExpenses: occurrences
+      .filter((item) => item.transactionType === "expense")
+      .filter((item, index, items) => items.findIndex((candidate) => candidate.itemId === item.itemId) === index)
+      .slice(0, 5)
   };
 }

@@ -1,5 +1,11 @@
 # SafeSpend
 
+## Interface and appearance
+
+SafeSpend uses a compact, mono-forward financial workspace with semantic light and dark palettes. Desktop navigation starts as an icon rail and can be expanded from the rail or Settings; mobile keeps a bottom navigation bar. Theme (`light`, `dark`, or `system`) and sidebar state are stored only in the current browser under versioned `safespend:v1:*` keys. New browsers default to the operating-system theme and a collapsed sidebar.
+
+UI colors must use the semantic Tailwind tokens (`background`, `foreground`, `card`, `muted`, `primary`, and `border`) so every route remains legible in both themes. Financial behavior and data remain server-side and are unaffected by appearance preferences.
+
 Use the eye control in the application header to blur or reveal sensitive financial amounts. The privacy preference is stored only in the current browser.
 
 Private, single-user personal finance software. The application currently includes accounts, transactions, generic CSV and Excel imports, categorization rules, splits, linked transfers, an actuals dashboard, annual savings goals, expected-scenario forecasting, backup and restore, CSV export, and production container support. Multi-sheet Google Sheets workbook migration and budgets remain outside the implemented task set.
