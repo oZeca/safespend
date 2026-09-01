@@ -53,6 +53,15 @@ test("creates, edits, filters, and deletes a transaction", async ({ page }) => {
   await page.getByRole("button", { name: "Close filters" }).click();
   const row = page.getByRole("article").filter({ hasText: description });
   await expect(row.getByText("-€45.20")).toBeVisible();
+  await page.getByRole("button", { name: /^Filters/ }).click();
+  await page.getByLabel("Expense", { exact: true }).check();
+  await page.getByRole("button", { name: "Apply filters" }).click();
+  await expect(row).toHaveCount(0);
+  await expect(page).toHaveURL(/excludeExpense=1/);
+  await page.getByRole("button", { name: /^Filters/ }).click();
+  await page.getByLabel("Expense", { exact: true }).uncheck();
+  await page.getByRole("button", { name: "Apply filters" }).click();
+  await expect(row).toBeVisible();
   const inlineCategory = row.getByRole("combobox", { name: `Category for ${description}` });
   await inlineCategory.selectOption({ label: "Shopping" });
   await expect(row.getByText("Saved")).toBeVisible();

@@ -5,11 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { orphanedAccountFilter, transactionTypeLabels, type AccountOption, type CategoryOption } from "@/features/transactions/model";
+import { orphanedAccountFilter, transactionTypeLabels, transactionTypes, type AccountOption, type CategoryOption } from "@/features/transactions/model";
 import type { DateRangePreset } from "@/lib/dates";
 
-type FilterParams = { search?: string; account?: string; category?: string; type?: string; accountBalance?: string; from?: string; to?: string; amountComparison?: string; amount?: string; sort?: string; page?: string; month?: string; status?: string; suggest?: string };
-type Props = { params: FilterParams; accounts: AccountOption[]; categories: CategoryOption[]; datePresets: DateRangePreset[]; month: string; dateSort: string; amountFilterError: string | null };
+type FilterParams = { search?: string; account?: string; category?: string; type?: string; excludeIncome?: string; excludeExpense?: string; excludeTransfer?: string; excludeRefund?: string; accountBalance?: string; from?: string; to?: string; amountComparison?: string; amount?: string; sort?: string; page?: string; status?: string; suggest?: string };
+type Props = { params: FilterParams; accounts: AccountOption[]; categories: CategoryOption[]; datePresets: DateRangePreset[]; sort: string; amountFilterError: string | null };
 
 function filterHref(params: FilterParams, changes: Partial<FilterParams>) {
   const query = new URLSearchParams(); const changedKeys = new Set(Object.keys(changes));
@@ -18,9 +18,10 @@ function filterHref(params: FilterParams, changes: Partial<FilterParams>) {
   const result = query.toString(); return result ? `/transactions?${result}` : "/transactions";
 }
 
-export function TransactionFilters({ params, accounts, categories, datePresets, month, dateSort, amountFilterError }: Props) {
+export function TransactionFilters({ params, accounts, categories, datePresets, sort, amountFilterError }: Props) {
   const router = useRouter();
-  const activeCount = [params.search, params.account, params.category, params.type, params.accountBalance, params.from || params.to, params.amount].filter(Boolean).length;
+  const hasExcludedTypes = Boolean(params.excludeIncome || params.excludeExpense || params.excludeTransfer || params.excludeRefund);
+  const activeCount = [params.search, params.account, params.category, params.type, hasExcludedTypes, params.accountBalance, params.from || params.to, params.amount].filter(Boolean).length;
   const selectClass = "h-9 min-w-0 rounded-md border bg-background px-2 text-sm";
   const inputClass = "h-10 w-full rounded-md border bg-background px-3 text-sm";
   const selectedAccount = accounts.find((account) => account.id === params.account);
@@ -53,13 +54,13 @@ export function TransactionFilters({ params, accounts, categories, datePresets, 
               <label className="relative sm:col-span-2"><span className="text-sm font-medium">Search</span><Search className="absolute bottom-3 left-3 h-4 w-4 text-muted-foreground" /><input className={`${inputClass} mt-2 pl-9`} defaultValue={params.search} name="search" placeholder="Search description or merchant" /></label>
               <label><span className="text-sm font-medium">Account</span><select className={`${inputClass} mt-2`} defaultValue={params.account ?? ""} name="account"><option value="">All accounts</option><option value={orphanedAccountFilter}>Orphaned (no account)</option>{accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></label>
               <label><span className="text-sm font-medium">Type</span><select className={`${inputClass} mt-2`} defaultValue={params.type ?? ""} name="type"><option value="">All types</option><option value="actual">Income, expenses, and refunds</option><option value="spending">Expenses and refunds</option>{Object.entries(transactionTypeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+              <fieldset className="sm:col-span-2"><legend className="text-sm font-medium">Exclude transaction types</legend><div className="mt-2 grid grid-cols-2 gap-2">{transactionTypes.map((type) => { const parameterName = `exclude${type[0].toUpperCase()}${type.slice(1)}` as keyof FilterParams; return <label className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm" key={type}><input defaultChecked={params[parameterName] === "1"} name={parameterName} type="checkbox" value="1" />{transactionTypeLabels[type]}</label>; })}</div></fieldset>
               <label className="sm:col-span-2"><span className="text-sm font-medium">Account balance treatment</span><select className={`${inputClass} mt-2`} defaultValue={params.accountBalance ?? ""} name="accountBalance"><option value="">All transactions</option><option value="internal">Internal movement within this account</option><option value="included">Included in calculated account balance</option></select></label>
-              <label><span className="text-sm font-medium">Sort</span><select className={`${inputClass} mt-2`} defaultValue={dateSort} name="sort"><option value="newest">Newest first</option><option value="oldest">Oldest first</option></select></label>
+              <label><span className="text-sm font-medium">Sort</span><select className={`${inputClass} mt-2`} defaultValue={sort} name="sort"><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="amount-high">Amount: high to low</option><option value="amount-low">Amount: low to high</option></select></label>
               <label><span className="text-sm font-medium">From</span><input className={`${inputClass} mt-2`} defaultValue={params.from} name="from" type="date" /></label>
               <label><span className="text-sm font-medium">To</span><input className={`${inputClass} mt-2`} defaultValue={params.to} name="to" type="date" /></label>
               <label><span className="text-sm font-medium">Amount comparison</span><select className={`${inputClass} mt-2`} defaultValue={params.amountComparison ?? "equal"} name="amountComparison"><option value="equal">Equals</option><option value="more">More than</option><option value="less">Less than</option></select></label>
               <label><span className="text-sm font-medium">Amount</span><input aria-describedby="amount-filter-help amount-filter-error" aria-invalid={amountFilterError ? true : undefined} aria-label="Transaction amount" className={`${inputClass} mt-2`} defaultValue={params.amount} inputMode="decimal" name="amount" placeholder="e.g. -50.00" /></label>
-              <label><span className="text-sm font-medium">Totals month</span><input className={`${inputClass} mt-2`} defaultValue={month} name="month" type="month" /></label>
               <p className="text-xs text-muted-foreground sm:col-span-2" id="amount-filter-help">Use a negative amount for money out and a positive amount for money in.</p>
               {amountFilterError && <p className="text-sm text-red-700 sm:col-span-2" id="amount-filter-error" role="alert">{amountFilterError}</p>}
             </div>

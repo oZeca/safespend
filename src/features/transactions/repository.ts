@@ -1,7 +1,7 @@
 import type Database from "better-sqlite3";
 import { randomUUID } from "node:crypto";
 import type { AccountType } from "@/features/accounts/model";
-import { calculateMonthlyTotals } from "./totals";
+import { calculateMonthlyTotals, calculateTransactionTotals } from "./totals";
 import { orphanedAccountFilter, type AccountOption, type CategoryOption, type Transaction, type TransactionFilters, type TransactionPage, type TransactionType } from "./model";
 import { normalizeDescription } from "./validation";
 
@@ -52,6 +52,10 @@ export function createTransactionRepository(database: Database.Database, options
         if (filters.categoryId !== "uncategorized") parameters.categoryId = filters.categoryId;
       }
       if (filters.transactionType) { where.push("t.transaction_type = @transactionType"); parameters.transactionType = filters.transactionType; }
+      for (const [index, transactionType] of (filters.excludedTransactionTypes ?? []).entries()) {
+        const parameterName = `excludedTransactionType${index}`;
+        where.push(`t.transaction_type != @${parameterName}`); parameters[parameterName] = transactionType;
+      }
       if (filters.flow === "spending") where.push("t.transaction_type IN ('expense', 'refund')");
       if (filters.flow === "actual") where.push("t.transaction_type IN ('income', 'expense', 'refund')");
       if (filters.accountBalanceTreatment === "internal") where.push("t.excluded_from_account_balance = 1");
@@ -67,8 +71,14 @@ export function createTransactionRepository(database: Database.Database, options
       const totalCount = (database.prepare(`SELECT COUNT(*) AS count FROM transactions t ${clause}`).get(parameters) as { count: number }).count;
       const totalPages = Math.max(1, Math.ceil(totalCount / filters.pageSize)); const page = Math.min(filters.page, totalPages);
       parameters.limit = filters.pageSize; parameters.offset = (page - 1) * filters.pageSize;
-      const direction = filters.dateSort === "oldest" ? "ASC" : "DESC";
-      const items = (database.prepare(`${select} ${clause} ORDER BY t.date ${direction}, t.created_at ${direction}, t.id ${direction} LIMIT @limit OFFSET @offset`).all(parameters) as TransactionRow[]).map(mapTransaction);
+      const orderBy = filters.sort === "amount-high"
+        ? "t.amount_cents DESC, t.date DESC, t.created_at DESC, t.id DESC"
+        : filters.sort === "amount-low"
+          ? "t.amount_cents ASC, t.date DESC, t.created_at DESC, t.id DESC"
+          : filters.sort === "oldest"
+            ? "t.date ASC, t.created_at ASC, t.id ASC"
+            : "t.date DESC, t.created_at DESC, t.id DESC";
+      const items = (database.prepare(`${select} ${clause} ORDER BY ${orderBy} LIMIT @limit OFFSET @offset`).all(parameters) as TransactionRow[]).map(mapTransaction);
       return { items, totalCount, page, pageSize: filters.pageSize, totalPages };
     },
     findById(id: string): Transaction | null {
@@ -147,6 +157,14 @@ export function createTransactionRepository(database: Database.Database, options
       const rows = database.prepare("SELECT transaction_type AS transactionType, amount_cents AS amountCents FROM transactions WHERE is_deleted = 0 AND date >= ? AND date < ?")
         .all(`${month}-01`, `${nextMonth}-01`) as Array<{ transactionType: TransactionType; amountCents: number }>;
       return calculateMonthlyTotals(rows, month);
+    },
+    dateRangeTotals(dateFrom?: string, dateTo?: string) {
+      const where = ["is_deleted = 0"]; const parameters: Record<string, string> = {};
+      if (dateFrom) { where.push("date >= @dateFrom"); parameters.dateFrom = dateFrom; }
+      if (dateTo) { where.push("date <= @dateTo"); parameters.dateTo = dateTo; }
+      const rows = database.prepare(`SELECT transaction_type AS transactionType, amount_cents AS amountCents FROM transactions WHERE ${where.join(" AND ")}`)
+        .all(parameters) as Array<{ transactionType: TransactionType; amountCents: number }>;
+      return calculateTransactionTotals(rows);
     }
   };
 }

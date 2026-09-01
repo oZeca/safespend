@@ -60,6 +60,9 @@ describe("transaction repository", () => {
       const deleted = repository.create({ ...base(account.id), amountCents: 90000, transactionType: "income" }); repository.softDelete(deleted.id);
       repository.create({ ...base(account.id), date: "2026-08-01", amountCents: 50000, transactionType: "income" });
       expect(repository.monthlyTotals("2026-07")).toEqual({ month: "2026-07", incomeCents: 10000, expenseCents: 4000, savingsCents: 6000 });
+      expect(repository.dateRangeTotals("2026-07-23", "2026-07-31")).toEqual({ incomeCents: 0, expenseCents: 0, savingsCents: 0 });
+      expect(repository.dateRangeTotals("2026-08-01", "2026-08-01")).toEqual({ incomeCents: 50000, expenseCents: 0, savingsCents: 50000 });
+      expect(repository.dateRangeTotals()).toEqual({ incomeCents: 60000, expenseCents: 4000, savingsCents: 56000 });
       expect(repository.list({ flow: "actual", dateFrom: "2026-07-01", dateTo: "2026-07-31", page: 1, pageSize: 20 }).totalCount).toBe(3);
       expect(repository.list({ flow: "spending", dateFrom: "2026-07-01", dateTo: "2026-07-31", page: 1, pageSize: 20 }).totalCount).toBe(2);
     } finally { database.close(); }
@@ -90,6 +93,19 @@ describe("transaction repository", () => {
     } finally { database.close(); }
   });
 
+  it("excludes any selected transaction types", () => {
+    const { database, repository, account } = setup();
+    try {
+      repository.create({ ...base(account.id), description: "Expense" });
+      repository.create({ ...base(account.id), description: "Income", amountCents: 10000, transactionType: "income", categoryId: "category-salary" });
+      repository.create({ ...base(account.id), description: "Transfer", amountCents: -2000, transactionType: "transfer", categoryId: "category-transfers" });
+      repository.create({ ...base(account.id), description: "Refund", amountCents: 1000, transactionType: "refund" });
+
+      expect(repository.list({ excludedTransactionTypes: ["income", "transfer"], page: 1, pageSize: 20 }).items.map((item) => item.description)).toEqual(["Refund", "Expense"]);
+      expect(repository.list({ transactionType: "expense", excludedTransactionTypes: ["expense"], page: 1, pageSize: 20 }).totalCount).toBe(0);
+    } finally { database.close(); }
+  });
+
   it("filters transactions whose linked account is archived or no longer exists", () => {
     const { database, repository, account } = setup();
     try {
@@ -113,16 +129,18 @@ describe("transaction repository", () => {
     } finally { database.close(); }
   });
 
-  it("sorts by transaction date in both directions and clamps pages", () => {
+  it("sorts by transaction date and signed amount and clamps pages", () => {
     const { database, repository, account } = setup();
     try {
-      repository.create({ ...base(account.id), date: "2026-07-20", description: "Middle" });
-      repository.create({ ...base(account.id), date: "2026-07-01", description: "Oldest" });
-      repository.create({ ...base(account.id), date: "2026-07-31", description: "Newest" });
+      repository.create({ ...base(account.id), date: "2026-07-20", description: "Middle", amountCents: -5000 });
+      repository.create({ ...base(account.id), date: "2026-07-01", description: "Oldest", amountCents: -9000 });
+      repository.create({ ...base(account.id), date: "2026-07-31", description: "Newest", amountCents: -2000 });
 
-      expect(repository.list({ dateSort: "newest", page: 1, pageSize: 20 }).items.map((item) => item.description)).toEqual(["Newest", "Middle", "Oldest"]);
-      expect(repository.list({ dateSort: "oldest", page: 1, pageSize: 20 }).items.map((item) => item.description)).toEqual(["Oldest", "Middle", "Newest"]);
-      expect(repository.list({ dateSort: "oldest", page: 99, pageSize: 2 })).toMatchObject({ page: 2, totalPages: 2 });
+      expect(repository.list({ sort: "newest", page: 1, pageSize: 20 }).items.map((item) => item.description)).toEqual(["Newest", "Middle", "Oldest"]);
+      expect(repository.list({ sort: "oldest", page: 1, pageSize: 20 }).items.map((item) => item.description)).toEqual(["Oldest", "Middle", "Newest"]);
+      expect(repository.list({ sort: "amount-high", page: 1, pageSize: 20 }).items.map((item) => item.description)).toEqual(["Newest", "Middle", "Oldest"]);
+      expect(repository.list({ sort: "amount-low", page: 1, pageSize: 20 }).items.map((item) => item.description)).toEqual(["Oldest", "Middle", "Newest"]);
+      expect(repository.list({ sort: "oldest", page: 99, pageSize: 2 })).toMatchObject({ page: 2, totalPages: 2 });
     } finally { database.close(); }
   });
 });

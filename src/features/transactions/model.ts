@@ -16,15 +16,16 @@ export interface Transaction {
 }
 
 export type TransactionFlow = "spending" | "actual";
-export const transactionDateSorts = ["newest", "oldest"] as const;
-export type TransactionDateSort = (typeof transactionDateSorts)[number];
+export const transactionSorts = ["newest", "oldest", "amount-high", "amount-low"] as const;
+export type TransactionSort = (typeof transactionSorts)[number];
 export const amountComparisons = ["equal", "more", "less"] as const;
 export type AmountComparison = (typeof amountComparisons)[number];
 export const accountBalanceTreatments = ["internal", "included"] as const;
 export type AccountBalanceTreatment = (typeof accountBalanceTreatments)[number];
 export interface TransactionFilters {
-  search?: string; accountId?: string; categoryId?: string; transactionType?: TransactionType; flow?: TransactionFlow; dateFrom?: string; dateTo?: string;
-  amountComparison?: AmountComparison; amountCents?: number; accountBalanceTreatment?: AccountBalanceTreatment; dateSort?: TransactionDateSort; page: number; pageSize: number;
+  search?: string; accountId?: string; categoryId?: string; transactionType?: TransactionType; excludedTransactionTypes?: TransactionType[]; flow?: TransactionFlow; dateFrom?: string; dateTo?: string;
+  amountComparison?: AmountComparison; amountCents?: number; accountBalanceTreatment?: AccountBalanceTreatment; sort?: TransactionSort; page: number; pageSize: number;
 }
 export interface TransactionPage { items: Transaction[]; totalCount: number; page: number; pageSize: number; totalPages: number; }
 export interface MonthlyTotals { month: string; incomeCents: number; expenseCents: number; savingsCents: number; }
+export interface TransactionTotals { incomeCents: number; expenseCents: number; savingsCents: number; }
