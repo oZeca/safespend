@@ -50,6 +50,8 @@ npm run db:seed
 
 Install Chromium once before E2E testing with `npx playwright install chromium`.
 
+Playwright always uses a disposable database at `.playwright/safespend-e2e.db`. The E2E startup removes only that dedicated database and refuses any other database path, including the normal `data/safespend.db`. Existing application data is therefore not read, migrated, restored, or mutated by `npm run test:e2e`.
+
 `npm run db:seed` only applies migrations and required defaults. `npm run db:seed:demo` explicitly adds idempotent synthetic accounts, transactions, a goal, and forecast assumptions. Never run demo seeding against a real finance database unless that data is wanted.
 
 ## Accounts
@@ -181,4 +183,4 @@ npm run test:e2e
 npm run build
 ```
 
-Repository tests use temporary SQLite databases and cover migrations, required pragmas, account and transaction mutations, balance snapshots, CSV parsing and normalization, import validation, categorization matching and precedence, rule previews and bulk application, import-time rules, profile persistence, exact duplicates, original-row preservation, soft deletion, filtering, deterministic monthly totals, exact split validation, transfer-link integrity, dashboard actuals, split-category spending, dashboard date validation, forecast persistence, recurrence expansion, baseline exclusions, investment-transfer credit, positive/zero/negative safe-to-spend outcomes, backup integrity, restore compatibility, transaction export escaping, and idempotent demo data.
+Repository unit tests use temporary SQLite databases, and Playwright uses its own guarded disposable database. Tests cover migrations, required pragmas, account and transaction mutations, balance snapshots, CSV parsing and normalization, import validation, categorization matching and precedence, rule previews and bulk application, import-time rules, profile persistence, exact duplicates, original-row preservation, soft deletion, filtering, deterministic monthly totals, exact split validation, transfer-link integrity, dashboard actuals, split-category spending, dashboard date validation, forecast persistence, recurrence expansion, baseline exclusions, investment-transfer credit, positive/zero/negative safe-to-spend outcomes, backup integrity, restore compatibility, transaction export escaping, and idempotent demo data.
