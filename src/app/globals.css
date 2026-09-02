@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 @layer base {
-  :root { --background: 48 47% 94%; --foreground: 45 12% 10%; --card: 48 42% 97%; --card-foreground: 45 12% 10%; --primary: 74 65% 30%; --primary-foreground: 48 50% 98%; --muted: 48 18% 89%; --muted-foreground: 45 6% 43%; --border: 46 18% 83%; }
-  .dark { --background: 50 8% 9%; --foreground: 46 25% 91%; --card: 48 7% 12%; --card-foreground: 46 25% 91%; --primary: 72 52% 59%; --primary-foreground: 55 18% 9%; --muted: 45 6% 18%; --muted-foreground: 45 8% 65%; --border: 45 6% 24%; }
+  :root { --background: 48 47% 94%; --foreground: 45 12% 10%; --card: 48 42% 97%; --card-foreground: 45 12% 10%; --primary: 74 65% 30%; --primary-foreground: 48 50% 98%; --muted: 48 18% 89%; --muted-foreground: 45 6% 43%; --border: 46 18% 83%; --chart-income: 74 58% 32%; --chart-income-secondary: 91 35% 48%; --chart-expense: 24 58% 45%; --chart-expense-secondary: 41 66% 52%; --chart-savings: 153 34% 36%; --chart-cash: 190 40% 39%; --chart-investment: 94 42% 40%; --chart-net-worth: 68 49% 27%; }
+  .dark { --background: 50 8% 9%; --foreground: 46 25% 91%; --card: 48 7% 12%; --card-foreground: 46 25% 91%; --primary: 72 52% 59%; --primary-foreground: 55 18% 9%; --muted: 45 6% 18%; --muted-foreground: 45 8% 65%; --border: 45 6% 24%; --chart-income: 72 52% 59%; --chart-income-secondary: 91 42% 61%; --chart-expense: 24 67% 64%; --chart-expense-secondary: 42 72% 62%; --chart-savings: 151 38% 57%; --chart-cash: 188 43% 59%; --chart-investment: 96 43% 58%; --chart-net-worth: 74 58% 67%; }
   * { @apply border-border; }
   html, body { max-width: 100%; overflow-x: hidden; }
   body { @apply bg-background text-foreground antialiased; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
