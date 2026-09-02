@@ -41,11 +41,19 @@ test("shows actual dashboard metrics and drills into matching transactions", asy
   await page.getByRole("link", { name: "Spending" }).click();
   await expect(page).toHaveURL(/view=spending/);
   await expect(page.getByRole("heading", { name: "Spending", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Monthly trend", exact: true })).toBeVisible();
   await expect(page.getByRole("img", { name: "Monthly income, expenses, and savings chart" })).toBeVisible();
   await expect(page.getByRole("heading", { name: /Category spending for \d{4}/ })).toBeVisible();
   const groceriesRow = page.getByRole("row").filter({ has: page.getByRole("link", { name: "Groceries", exact: true }) });
   await expect(groceriesRow.getByRole("rowheader", { name: "Groceries" })).toBeVisible();
   await expect(groceriesRow.getByRole("link", { name: /Groceries spending in \d{4}-\d{2}/ }).last()).toBeVisible();
+
+  await page.getByRole("link", { name: "Wealth" }).click();
+  await expect(page).toHaveURL(/view=wealth/);
+  await expect(page.getByRole("heading", { name: "Net worth through year end", exact: true })).toBeVisible();
+  await expect(page.getByRole("img", { name: "Cash, investments, and total balance at the end of each month" })).toBeVisible();
+
+  await page.getByRole("link", { name: "Spending" }).click();
 
   const incomeCard = page.getByRole("link").filter({ hasText: /income/i }).filter({ hasText: "View transactions" }).first();
   await incomeCard.click();

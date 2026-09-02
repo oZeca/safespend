@@ -19,7 +19,7 @@ export function SafeToSpendHero({ forecast, monthLabel }: { forecast: ForecastRe
   const tone = isNegative ? "text-red-700 dark:text-red-300" : "text-emerald-800 dark:text-emerald-300";
   const stroke = isNegative ? "hsl(0 68% 48%)" : "hsl(var(--primary))";
 
-  return <section className="relative isolate -mx-4 min-h-[24rem] w-auto overflow-hidden border-t border-primary/15 bg-gradient-to-b from-card/25 via-primary/[0.055] to-background px-5 py-7 sm:-mx-5 sm:min-h-[26rem] sm:px-8 sm:py-9 lg:-mx-7 lg:px-10" aria-labelledby="safe-to-spend-heading">
+  return <section className="relative isolate -mx-4 min-h-[24rem] w-auto overflow-hidden bg-gradient-to-b from-card/25 via-primary/[0.055] to-background px-5 py-7 sm:-mx-5 sm:min-h-[26rem] sm:px-8 sm:py-9 lg:-mx-7 lg:px-10" aria-labelledby="safe-to-spend-heading">
     <div className="relative z-10 max-w-2xl">
       <div className="flex items-center gap-1.5 text-sm font-medium text-primary">
         <h1 id="safe-to-spend-heading">Safe to spend for the rest of {monthLabel}</h1>
