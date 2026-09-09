@@ -20,6 +20,7 @@ COPY --from=build /app/.next ./.next
 COPY --from=build /app/public ./public
 COPY --from=build /app/src/db ./src/db
 COPY --from=build /app/package.json ./package.json
+COPY --from=build /app/next.config.ts ./next.config.ts
 RUN mkdir -p /app/data && chown -R node:node /app
 USER node
 EXPOSE 3000
